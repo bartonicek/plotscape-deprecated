@@ -1,0 +1,28 @@
+{
+  "name": "plotscape",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "bundle": "tsc-bundle tsconfig.json --outFile ./dist/bundle.js",
+    "uglify": "uglifyjs ./dist/bundle.js --mangle -o ./dist/bundle.min.js",
+    "all": "npm-run-all bundle uglify"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bartonicek/plotscape.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bartonicek/plotscape/issues"
+  },
+  "homepage": "https://github.com/bartonicek/plotscape#readme",
+  "dependencies": {
+    "run": "^1.4.0",
+    "run-all": "^1.0.1",
+    "typescript-bundle": "^1.0.18",
+    "uglify-js": "^3.17.1"
+  }
+}
