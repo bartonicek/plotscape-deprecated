@@ -1,18 +1,23 @@
 import { Scene } from "./Scene.js";
 import { Mapping } from "./Mapping.js";
 import { DataFrame } from "./DataFrame.js";
+import { VectorGeneric } from "./datastructures.js";
 
-export const mtcarsExample = (element: HTMLDivElement, data: DataFrame) => {
-  const scene = new Scene(element, data)
-    .addPlotWrapper("histo", new Mapping(["x", "mpg"], ["y", "_indicator"]))
-    .addPlotWrapper("scatter", new Mapping(["x", "wt"], ["y", "mpg"]))
-    .addPlotWrapper(
-      "square",
-      new Mapping(["x", "cyl"], ["y", "am"], ["size", "_indicator"])
-    )
-    .addPlotWrapper("bar", new Mapping(["x", "carb"], ["y", "_indicator"]));
-  return scene;
-};
+// export const mtcarsExample = (
+//   element: HTMLDivElement,
+//   data: { [key: string]: VectorGeneric }
+// ) => {
+//   const dataProcessed = new DataFrame(data);
+//   const scene = new Scene(element, dataProcessed)
+//     .addPlotWrapper("histo", new Mapping(["x", "mpg"], ["y", "_indicator"]))
+//     .addPlotWrapper("scatter", new Mapping(["x", "wt"], ["y", "mpg"]))
+//     .addPlotWrapper(
+//       "square",
+//       new Mapping(["x", "cyl"], ["y", "am"], ["size", "_indicator"])
+//     )
+//     .addPlotWrapper("bar", new Mapping(["x", "carb"], ["y", "_indicator"]));
+//   return scene;
+// };
 
 // const mtcars = async (element: HTMLDivElement) => {
 //   const dataMtcars = await DataFrame.getData("./exampleData/mtcars.json");

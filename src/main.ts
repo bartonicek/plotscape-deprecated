@@ -1,2 +1,3 @@
-import * as funs from "./functions.js";
-export { funs };
+export * from "./Scene.js";
+export * from "./DataFrame.js";
+export * from "./Mapping.js";

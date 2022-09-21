@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "bundle": "tsc-bundle tsconfig.json --outFile ./dist/bundle.js",
+    "bundle": "tsc-bundle tsconfig.json --outFile ./dist/bundle.js --exportAs PLOTSCAPE",
     "uglify": "uglifyjs ./dist/bundle.js --mangle -o ./dist/bundle.min.js",
     "all": "npm-run-all bundle uglify"
   },
