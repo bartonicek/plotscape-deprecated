@@ -1,5 +1,3 @@
-import * as funs from "./functions.js";
-
 export const globalParameters = {
   bgCol: `#f2efde`,
   reps: {

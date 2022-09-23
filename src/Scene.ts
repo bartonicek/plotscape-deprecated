@@ -62,6 +62,7 @@ export class Scene {
       plotType,
       plotId,
       element,
+      this.nPlots,
       data,
       mapping,
       handlers
@@ -84,6 +85,7 @@ class PlotProxy {
     ...args: [
       id: string,
       element: HTMLDivElement,
+      nPlots: number,
       data: DataFrame,
       mapping: Mapping,
       handlers: {

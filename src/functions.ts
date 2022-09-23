@@ -1,4 +1,5 @@
 import * as datastr from "./datastructures.js";
+import { globalParameters } from "./globalparameters.js";
 
 const isNumeric = (x: datastr.VectorGeneric) => typeof x[0] === "number";
 const identity = (x: datastr.VectorGeneric) => x;
@@ -87,9 +88,11 @@ const accessUnpeel = (obj: Object, ...props: string[]) => {
   return result;
 };
 
-const accessIndexed = (obj: Object, index: number) => {
-  const res = Object.keys(obj).map((e) => [e, obj[e][index]]);
-  return Object.fromEntries(res);
+const accessIndexed = (obj: any, index: number) => {
+  // Deep-clone the object to retain structure
+  const res = JSON.parse(JSON.stringify(obj));
+  Object.keys(obj).forEach((e) => (res[e] = obj[e][index]));
+  return res;
 };
 
 const throttle = (fun: Function, delay: number) => {
@@ -118,9 +121,12 @@ const prettyBreaks = (x: number[], n = 4) => {
   const minNeat = Math.round(min / unitNeat) * unitNeat;
   const maxNeat = Math.round(max / unitNeat) * unitNeat;
   const middle = Array.from(
-    Array((maxNeat - minNeat) / unitNeat - 1),
+    Array(Math.floor((maxNeat - minNeat) / unitNeat - 1)),
     (e, i) => minNeat + (i + 1) * unitNeat
   );
+  // const middle = [];
+  // let i = (maxNeat - minNeat) / unitNeat - 1;
+  // while (i--) middle[i] = minNeat + (i + 1) * unitNeat;
 
   const breaks = [minNeat, ...middle, maxNeat].map((e) =>
     parseFloat(e.toFixed(4))

@@ -12,6 +12,7 @@ export class BubblePlot extends Plot {
   constructor(
     id: string,
     element: HTMLDivElement,
+    nPlots: number,
     data: DataFrame,
     mapping: dtstr.Mapping,
     handlers: {
@@ -20,7 +21,7 @@ export class BubblePlot extends Plot {
       state: hndl.StateHandler;
     }
   ) {
-    super(id, element, data, mapping, handlers);
+    super(id, element, nPlots, mapping, handlers);
 
     this.wranglers = {
       identity: new Wrangler(data, mapping, handlers.marker)

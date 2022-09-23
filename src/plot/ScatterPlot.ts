@@ -13,6 +13,7 @@ export class ScatterPlot extends Plot {
   constructor(
     id: string,
     element: HTMLDivElement,
+    nPlots: number,
     data: DataFrame,
     mapping: dtstr.Mapping,
     handlers: {
@@ -21,7 +22,8 @@ export class ScatterPlot extends Plot {
       state: hndl.StateHandler;
     }
   ) {
-    super(id, element, data, mapping, handlers);
+    super(id, element, nPlots, mapping, handlers);
+
     this.mapping = mapping;
 
     this.wranglers = {

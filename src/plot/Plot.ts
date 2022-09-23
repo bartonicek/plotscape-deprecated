@@ -28,7 +28,7 @@ export class Plot extends GraphicStack {
   constructor(
     id: string,
     element: HTMLDivElement,
-    data: DataFrame,
+    nPlots: number,
     mapping: dtstr.Mapping,
     handlers: {
       marker: hndl.MarkerHandler;
@@ -36,7 +36,7 @@ export class Plot extends GraphicStack {
       state: hndl.StateHandler;
     }
   ) {
-    super(element);
+    super(element, nPlots);
     this.id = id;
     this.representations = {};
     this.wranglers = {};

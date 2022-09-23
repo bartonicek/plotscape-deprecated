@@ -6,7 +6,8 @@
   "scripts": {
     "bundle": "tsc-bundle tsconfig.json --outFile ./dist/bundle.js --exportAs PLOTSCAPE",
     "uglify": "uglifyjs ./dist/bundle.js --mangle -o ./dist/bundle.min.js",
-    "all": "npm-run-all bundle uglify"
+    "copy": "cp dist/bundle.js ~/Documents/2022/programming/r/plotscapeTest/inst/htmlwidgets/plotscapeTest",
+    "all": "npm-run-all bundle uglify copy"
   },
   "repository": {
     "type": "git",

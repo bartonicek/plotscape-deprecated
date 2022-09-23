@@ -36,9 +36,15 @@ export class AxisText extends Auxiliary {
   };
 
   draw = (context: GraphicLayer) => {
+    console.log(this.scales.x.length);
+    const xMargins = this.scales.x.margins;
+    const yMargins = this.scales.y.margins;
+
     const labelWidths = this.getLabelMetrics(context).map((e) => e.width);
+    // Hacky solution since older versions of JavaScript don't
+    // support TextMetrics.actualBoundingBoxAscent
     const labelHeights = this.getLabelMetrics(context).map(
-      (e) => e.actualBoundingBoxAscent
+      (e) => context.context.measureText("M").width
     );
 
     const intercepts = Array.from(
@@ -50,6 +56,7 @@ export class AxisText extends Auxiliary {
       this.along === "x"
         ? this.breaks
         : intercepts.map((e, i) => -5 + e - labelWidths[i]);
+
     const y =
       this.along === "x"
         ? intercepts.map((e, i) => 5 + e + 2 * labelHeights[i])
