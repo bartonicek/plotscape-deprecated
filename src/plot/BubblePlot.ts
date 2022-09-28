@@ -9,22 +9,17 @@ import { Plot } from "./Plot.js";
 import { DataFrame } from "../DataFrame.js";
 
 export class BubblePlot extends Plot {
+  mapping: dtstr.Mapping;
+
   constructor(
     id: string,
     element: HTMLDivElement,
-    nPlots: number,
-    data: DataFrame,
     mapping: dtstr.Mapping,
-    handlers: {
-      marker: hndl.MarkerHandler;
-      keypress: hndl.KeypressHandler;
-      state: hndl.StateHandler;
-    }
+    globals: dtstr.Globals
   ) {
-    super(id, element, nPlots, mapping, handlers);
-
+    super(id, element, mapping, globals);
     this.wranglers = {
-      identity: new Wrangler(data, mapping, handlers.marker)
+      identity: new Wrangler(globals.data, mapping, globals.handlers.marker)
         .splitBy("x", "y")
         .splitWhat("size")
         .doWithin("by", funs.unique)

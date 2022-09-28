@@ -44,7 +44,7 @@ export class Bars extends Representation {
   };
 
   drawHighlight = (context: GraphicLayer) => {
-    dtstr.validMembershipArray.forEach((e) => {
+    dtstr.highlightMembershipArray.forEach((e) => {
       const [x, y] = this.getMappings(e);
       // console.log(e);
       // console.log(y);

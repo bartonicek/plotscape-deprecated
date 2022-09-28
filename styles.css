@@ -1,22 +1,22 @@
 
 .graphicDiv {
+  position: relative;
   background-color: #BDC7C2;
   text-align: center;
   margin: 0px;
   top: 0;
   right: 0;
-  padding-top: 100px;
-  padding-bottom: 100px;
+  padding-top: 2.5%;
+  padding-bottom: 2.5%;
   box-shadow: inset 2px 2px 5px #00000025;
+  overflow: hidden;
 }
 
 .graphicContainer {
   position: relative;
   display: inline-block;
-  width: 600px;
-  height: 600px;
   padding: 0px;
-  margin: 10px;
+  margin: 1%;
   box-shadow: 5px 5px 3px #00000025;
 }
 
@@ -26,35 +26,38 @@
   left: 0;
 }
 
-.sidePanelHelp {
+.helpPanel {
+  z-index: 1;
   width: 0px;
   height: max-content;
   padding-top: 20px;
   padding-bottom: 100px;
   margin: 0px;
-  position: fixed;
+  position: absolute;
   white-space: nowrap;
   top: 20px;
   right: 20px;
   background-color: #00000090;
-  color: aliceblue;
+  color: rgba(1, 1, 1, 0);
   font-family: serif;  
   font-size: 20pt;
+  text-align: left;
   text-shadow: #2E3532;
   transition: 1s;
 }
 
-.sidePanelHelpActive{
-  width: 80%;
+.helpPanel.activePanel{
+  color: white;
+  width: 90%;
 }
 
-.textHelp {
+/* .textHelp {
   padding-left: 20px;
   padding-right: 5px;
   padding-top: 5px;
   margin: 10px;
   overflow: hidden;
-}
+} */
 
 kbd {
   background-color:#2E3532;
@@ -65,8 +68,9 @@ kbd {
 }
 
 .buttonHelp {
-  width: 50px;
-  height: 50px;
+  z-index: 2;
+  width: 5%;
+  height: 5%;
   position: absolute;
   top: 0%;
   right: 0%;
@@ -74,7 +78,6 @@ kbd {
   background-color: #2E3532;
   color: antiquewhite;
   font-family: serif;
-  font-size: 30pt;
   font-weight: bold;
 }
 

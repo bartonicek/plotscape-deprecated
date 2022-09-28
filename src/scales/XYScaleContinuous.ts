@@ -12,11 +12,19 @@ export class XYScaleContinuous extends ScaleContinuous {
   ) {
     super(length, direction, zero, expand);
     this.margins = margins;
+    this.span = 1 - margins.lower - margins.upper;
 
     // Shift & shrink the scale by the plot margins
-    this.offset =
-      this.offset + this.direction * this.length * this.margins.lower;
-    this.length = (1 - this.margins.lower - this.margins.upper) * this.length;
+    // this.offset =
+    //   this.offset + this.direction * this.length * this.margins.lower;
+    // this.length = (1 - this.margins.lower - this.margins.upper) * this.length;
+  }
+
+  get offset() {
+    return (
+      this.offsetOriginal +
+      this.direction * this.lengthOriginal * this.margins.lower
+    );
   }
 
   get plotMin() {

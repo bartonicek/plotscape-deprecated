@@ -1,22 +1,39 @@
+import * as dtstr from "../datastructures.js";
 import { globalParameters as gpars } from "../globalparameters.js";
 
 export class GraphicLayer {
+  globals: dtstr.Globals;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
-  width: number;
-  height: number;
   backgroundColour: string;
 
-  constructor(width: number, height: number) {
+  constructor(globals: dtstr.Globals) {
+    this.globals = globals;
     this.canvas = document.createElement("canvas");
     this.context = this.canvas.getContext("2d");
-    this.width = width;
-    this.height = height;
     this.backgroundColour = gpars.bgCol;
-
-    this.canvas.width = width;
-    this.canvas.height = height;
+    this.resize();
   }
+
+  get width() {
+    return this.globals.plotWidth;
+  }
+
+  get height() {
+    return this.globals.plotHeight;
+  }
+
+  get scaleFactor() {
+    return this.globals.scaleFactor;
+  }
+
+  resize = () => {
+    this.canvas.style.width = `${this.width}px`;
+    this.canvas.style.height = `${this.height}px`;
+    this.canvas.width = Math.ceil(this.width * this.scaleFactor);
+    this.canvas.height = Math.ceil(this.height * this.scaleFactor);
+    this.context.scale(this.scaleFactor, this.scaleFactor);
+  };
 
   dropMissing = (...vectors: any[]) => {
     let missingIndices = [...vectors].flatMap((vector) =>
@@ -165,7 +182,6 @@ export class GraphicLayer {
   ) => {
     const context = this.context;
     context.save();
-    context.textAlign = "center";
     context.font = `${size}px Times New Roman`;
     x.forEach((e, i) => {
       context.translate(e, y[i]);

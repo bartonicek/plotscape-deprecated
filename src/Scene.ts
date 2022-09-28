@@ -7,32 +7,42 @@ import { DataFrame } from "./DataFrame.js";
 
 export class Scene {
   element: HTMLDivElement;
-  data: DataFrame;
   nObs: number;
-  nPlots: number;
   nPlotsOfType: number[];
   plots: { [name: string]: Plot };
   plotIds: string[];
-  handlers: {
-    marker: hndl.MarkerHandler;
-    keypress: hndl.KeypressHandler;
-    state: hndl.StateHandler;
-  };
+  globals: dtstr.Globals;
 
   constructor(element: HTMLDivElement, data: DataFrame) {
     this.element = element;
-    this.data = data;
     this.nObs = data[Object.keys(data)[0]].length;
-    this.nPlots = 0;
     this.nPlotsOfType = Array(dtstr.plotTypeArray.length).fill(0);
     this.plots = {};
     this.plotIds = [];
-    this.handlers = {
-      marker: new hndl.MarkerHandler(this.nObs),
-      keypress: new hndl.KeypressHandler(),
-      state: new hndl.StateHandler(),
+    this.globals = {
+      nPlots: 0,
+      scaleFactor: 3,
+      data: data,
+      sceneWidth: parseInt(getComputedStyle(element).width, 10),
+      sceneHeight: parseInt(getComputedStyle(element).height, 10),
+      get plotWidth() {
+        return (
+          (0.85 * this.sceneWidth) /
+          Math.ceil(this.nPlots / Math.floor(Math.sqrt(this.nPlots)))
+        );
+      },
+      get plotHeight() {
+        return (0.85 * this.sceneHeight) / Math.floor(Math.sqrt(this.nPlots));
+      },
+      handlers: {
+        marker: new hndl.MarkerHandler(this.nObs),
+        keypress: new hndl.KeypressHandler(),
+        state: new hndl.StateHandler(),
+      },
     };
-    this.handlers.state.keypressHandler = this.handlers.keypress;
+    element.classList.add("graphicDiv");
+    this.globals.handlers.state.keypressHandler =
+      this.globals.handlers.keypress;
 
     // Inject css
     const head = document.head;
@@ -42,18 +52,31 @@ export class Scene {
     link.href = "./styles.css";
     head.appendChild(link);
 
-    // document
-    //   .querySelector<HTMLElement>(".buttonHelp")
-    //   .addEventListener("click", (event) => {
-    //     document
-    //       .querySelector<HTMLElement>(".sidePanelHelp")
-    //       .classList.toggle("sidePanelHelpActive");
-    //   });
+    // Add help button and panel
+    const helpButton = document.createElement("button");
+    const helpPanel = document.createElement("div");
+    helpButton.innerText = "?";
+    helpButton.classList.add("buttonHelp");
+    helpPanel.innerText = "Hello, welcome to Plotscape";
+    helpPanel.classList.add("helpPanel");
+
+    const helpButtonDim =
+      Math.min(this.globals.sceneWidth, this.globals.sceneHeight) * 0.05;
+    helpButton.style.width = `${helpButtonDim}px`;
+    helpButton.style.height = `${helpButtonDim}px`;
+    helpButton.style.fontSize = `${0.5 * helpButtonDim}px`;
+
+    element.appendChild(helpPanel);
+    element.appendChild(helpButton);
+    helpButton.addEventListener("click", (event) => {
+      helpPanel.classList.toggle("activePanel");
+    });
   }
 
   addPlotWrapper = (plotType: dtstr.PlotTypes, mapping: Mapping) => {
-    const { element, data, handlers, plotIds } = this;
+    const { element, plotIds, plots, globals } = this;
 
+    this.globals.nPlots++;
     const plotTypeIndex = dtstr.plotTypeArray.findIndex((e) => e === plotType);
     this.nPlotsOfType[plotTypeIndex]++;
     const plotId = `${plotType}${this.nPlotsOfType[plotTypeIndex]}`;
@@ -62,15 +85,22 @@ export class Scene {
       plotType,
       plotId,
       element,
-      this.nPlots,
-      data,
       mapping,
-      handlers
+      globals
     ) as Plot;
     plotIds.push(plotId);
-    handlers.state.plotIds.push(plotId);
-    handlers.state.plotsActive.push(false);
-    handlers.state.plotContainers.push(this.plots[plotId].graphicContainer);
+    globals.handlers.state.plotIds.push(plotId);
+    globals.handlers.state.plotsActive.push(false);
+    globals.handlers.state.plotContainers.push(
+      this.plots[plotId].graphicContainer
+    );
+
+    if (plotIds.length > 1) {
+      plotIds.forEach((e) => {
+        plots[e].resize();
+        plots[e].drawRedraw();
+      });
+    }
     return this;
   };
 
@@ -85,13 +115,15 @@ class PlotProxy {
     ...args: [
       id: string,
       element: HTMLDivElement,
-      nPlots: number,
-      data: DataFrame,
       mapping: Mapping,
-      handlers: {
-        marker: hndl.MarkerHandler;
-        keypress: hndl.KeypressHandler;
-        state: hndl.StateHandler;
+      globals: {
+        nPlots: number;
+        data: DataFrame;
+        handlers: {
+          marker: hndl.MarkerHandler;
+          keypress: hndl.KeypressHandler;
+          state: hndl.StateHandler;
+        };
       }
     ]
   ) {

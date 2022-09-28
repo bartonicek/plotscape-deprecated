@@ -32,7 +32,7 @@ export class Squares extends Representation {
   };
 
   drawHighlight = (context: GraphicLayer) => {
-    dtstr.validMembershipArray.forEach((e) => {
+    dtstr.highlightMembershipArray.forEach((e) => {
       const [x, y, size] = this.getMappings(e);
       if (!x) return;
       const { col, strokeCol, strokeWidth } = this.getPars(e);

@@ -36,33 +36,34 @@ export class AxisText extends Auxiliary {
   };
 
   draw = (context: GraphicLayer) => {
-    console.log(this.scales.x.length);
-    const xMargins = this.scales.x.margins;
-    const yMargins = this.scales.y.margins;
+    const { scales, along, other, breaks } = this;
 
-    const labelWidths = this.getLabelMetrics(context).map((e) => e.width);
-    // Hacky solution since older versions of JavaScript don't
-    // support TextMetrics.actualBoundingBoxAscent
-    const labelHeights = this.getLabelMetrics(context).map(
-      (e) => context.context.measureText("M").width
+    const size = Math.min(
+      ...[along, other].map(
+        (e) => 0.3 * scales[e].margins.lower * scales[e].length
+      )
     );
 
     const intercepts = Array.from(
-      Array(this.breaks.length),
-      (e) => this.scales[this.other].plotMin
+      Array(breaks.length),
+      (e) => scales[other].plotMin + (along === "x" ? 5 : -5)
     );
 
-    const x =
-      this.along === "x"
-        ? this.breaks
-        : intercepts.map((e, i) => -5 + e - labelWidths[i]);
+    const coords = { x: null, y: null };
+    coords[along] = breaks;
+    coords[other] = intercepts;
 
-    const y =
-      this.along === "x"
-        ? intercepts.map((e, i) => 5 + e + 2 * labelHeights[i])
-        : this.breaks;
+    if (along === "x") {
+      context.context.textBaseline = "top";
+      context.context.textAlign = "center";
+    }
+    if (along === "y") {
+      context.context.textBaseline = "middle";
+      context.context.textAlign = "right";
+    }
 
-    context.drawText(x, y, this.labels);
+    //    context.context.textAlign = along === "x" ? "center" : "right";
+    context.drawText(coords.x, coords.y, this.labels, size);
   };
 
   drawBase = (context: GraphicLayer) => {

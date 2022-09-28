@@ -2,17 +2,32 @@ import { VectorGeneric } from "../datastructures.js";
 
 export class Scale {
   data: VectorGeneric;
-  length: number;
+  lengthOriginal: number;
+  offsetOriginal: number;
+  span: number;
   direction: number;
   expand: number;
-  offset: number;
 
   constructor(length: number, direction = 1, expand = 0.1) {
-    this.length = length;
+    this.lengthOriginal = length;
+    this.offsetOriginal = this.direction === -1 ? length : 0;
+    this.span = 1;
     this.direction = direction;
     this.expand = expand;
-    this.offset = this.direction === -1 ? this.length : 0;
   }
+
+  get length() {
+    return this.lengthOriginal * this.span;
+  }
+
+  get offset() {
+    return this.offsetOriginal;
+  }
+
+  setLength = (length: number) => {
+    this.lengthOriginal = length;
+    this.offsetOriginal = this.direction === -1 ? length : 0;
+  };
 
   registerData = (data: VectorGeneric) => {
     this.data = data;

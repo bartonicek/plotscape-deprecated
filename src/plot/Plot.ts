@@ -28,23 +28,18 @@ export class Plot extends GraphicStack {
   constructor(
     id: string,
     element: HTMLDivElement,
-    nPlots: number,
     mapping: dtstr.Mapping,
-    handlers: {
-      marker: hndl.MarkerHandler;
-      keypress: hndl.KeypressHandler;
-      state: hndl.StateHandler;
-    }
+    globals: dtstr.Globals
   ) {
-    super(element, nPlots);
+    super(element, globals);
     this.id = id;
     this.representations = {};
     this.wranglers = {};
     this.scales = {};
     this.handlers = {
-      marker: handlers.marker,
-      keypress: handlers.keypress,
-      state: handlers.state,
+      marker: globals.handlers.marker,
+      keypress: globals.handlers.keypress,
+      state: globals.handlers.state,
       drag: new hndl.DragHandler(this.graphicContainer),
       click: new hndl.ClickHandler(this.graphicContainer),
     };
@@ -57,6 +52,15 @@ export class Plot extends GraphicStack {
       highlightrects: new auxs.HighlightRects(this.handlers),
     };
   }
+
+  resize = () => {
+    const graphicLayers = ["graphicBase", "graphicUser", "graphicHighlight"];
+    this.scales.x.setLength(this.width);
+    this.scales.y.setLength(this.height);
+    this.graphicContainer.style.width = `${this.width}px`;
+    this.graphicContainer.style.height = `${this.height}px`;
+    graphicLayers.forEach((e) => this[e].resize());
+  };
 
   get active() {
     return this.handlers.state.isActive(this.id);
@@ -209,6 +213,11 @@ export class Plot extends GraphicStack {
   drawHighlight = () => this.draw("highlight");
   drawUser = () => {
     if (this.active || this.handlers.state.inState("none")) this.draw("user");
+  };
+  drawRedraw = () => {
+    this.drawBase();
+    this.drawHighlight();
+    this.drawUser();
   };
 
   initialize = () => {

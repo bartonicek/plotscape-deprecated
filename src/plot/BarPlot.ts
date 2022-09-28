@@ -13,20 +13,13 @@ export class BarPlot extends Plot {
   constructor(
     id: string,
     element: HTMLDivElement,
-    nPlots: number,
-    data: DataFrame,
     mapping: dtstr.Mapping,
-    handlers: {
-      marker: hndl.MarkerHandler;
-      keypress: hndl.KeypressHandler;
-      state: hndl.StateHandler;
-    }
+    globals: dtstr.Globals
   ) {
-    super(id, element, nPlots, mapping, handlers);
+    super(id, element, mapping, globals);
     this.mapping = mapping;
-
     this.wranglers = {
-      summary: new Wrangler(data, mapping, handlers.marker)
+      summary: new Wrangler(globals.data, mapping, globals.handlers.marker)
         .splitBy("x")
         .splitWhat("y")
         .doWithin("by", funs.unique)

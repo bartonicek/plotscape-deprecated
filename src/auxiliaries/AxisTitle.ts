@@ -20,22 +20,28 @@ export class AxisTitle extends Auxiliary {
   draw = (context: GraphicLayer) => {
     if (this.label === "_indicator") return;
 
-    const labelWidth = this.getLabelMetrics(context).width;
-    const labelHeight = this.getLabelMetrics(context).actualBoundingBoxAscent;
+    const { scales, along, other } = this;
 
-    const x =
-      this.along === "x"
-        ? this.scales.x.pctToPlot(0.5)
-        : this.scales.x.pctToPlot(0) - 50;
+    const size = Math.min(
+      ...[along, other].map(
+        (e) => 0.4 * scales[e].margins.lower * scales[e].length
+      )
+    );
 
-    const y =
-      this.along === "x"
-        ? this.scales.y.pctToPlot(0) + 50
-        : this.scales.y.pctToPlot(0.5);
+    const coords = { x: null, y: null };
+    coords[along] = scales[along].pctToPlot(0.5);
+    coords[other] =
+      scales[other].pctToPlot(0) +
+      (along === "x" ? 1 : -1) *
+        0.85 *
+        scales[other].margins.lower *
+        scales[other].length;
 
     const rot = this.along === "x" ? 0 : 270;
 
-    context.drawText([x], [y], [this.label], 30, rot);
+    context.context.textAlign = "center";
+    context.context.textBaseline = "middle";
+    context.drawText([coords.x], [coords.y], [this.label], size, rot);
   };
 
   drawBase = (context: GraphicLayer) => {

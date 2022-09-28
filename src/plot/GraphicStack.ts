@@ -1,24 +1,27 @@
+import * as dtstr from "datastructures.js";
 import { GraphicLayer } from "./GraphicLayer.js";
 
 export class GraphicStack {
-  nPlots: number;
+  globals: dtstr.Globals;
   graphicDiv: HTMLDivElement;
   graphicContainer: HTMLDivElement;
   graphicBase: GraphicLayer;
   graphicHighlight: GraphicLayer;
   graphicUser: GraphicLayer;
-  divWidth: number;
-  divHeight: number;
-  containerWidth: number;
-  containerHeight: number;
-  width: number;
-  height: number;
 
-  constructor(element: HTMLDivElement, nPlots: number) {
-    this.nPlots = nPlots;
+  constructor(element: HTMLDivElement, globals: dtstr.Globals) {
+    this.globals = globals;
     this.graphicDiv = element;
     this.graphicContainer = document.createElement("div");
     this.initialize();
+  }
+
+  get width() {
+    return this.globals.plotWidth;
+  }
+
+  get height() {
+    return this.globals.plotHeight;
   }
 
   initialize = () => {
@@ -27,14 +30,8 @@ export class GraphicStack {
     this.graphicDiv.appendChild(this.graphicContainer);
     this.graphicContainer.setAttribute("class", "graphicContainer");
 
-    // this.divWidth = parseInt(getComputedStyle(this.graphicDiv).width, 10);
-    // this.divHeight = parseInt(getComputedStyle(this.graphicDiv).height, 10);
-
-    this.width = parseInt(getComputedStyle(this.graphicContainer).width, 10);
-    this.height = parseInt(getComputedStyle(this.graphicContainer).height, 10);
-
     graphicLayers.forEach((e) => {
-      this[e] = new GraphicLayer(this.width, this.height);
+      this[e] = new GraphicLayer(this.globals);
       this.graphicContainer.appendChild(this[e].canvas);
     });
     this.graphicBase.drawBackground();

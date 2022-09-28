@@ -1,5 +1,8 @@
 import * as datastr from "./datastructures.js";
-import { globalParameters } from "./globalparameters.js";
+
+const deeplyClone = (x: Object) => {
+  return JSON.parse(JSON.stringify(x));
+};
 
 const isNumeric = (x: datastr.VectorGeneric) => typeof x[0] === "number";
 const identity = (x: datastr.VectorGeneric) => x;
@@ -90,7 +93,7 @@ const accessUnpeel = (obj: Object, ...props: string[]) => {
 
 const accessIndexed = (obj: any, index: number) => {
   // Deep-clone the object to retain structure
-  const res = JSON.parse(JSON.stringify(obj));
+  const res = deeplyClone(obj);
   Object.keys(obj).forEach((e) => (res[e] = obj[e][index]));
   return res;
 };

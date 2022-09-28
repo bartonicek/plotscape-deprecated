@@ -1,29 +1,20 @@
 import * as dtstr from "../datastructures.js";
-import * as hndl from "../handlers/handlers.js";
 import * as scls from "../scales/scales.js";
 import * as reps from "../representations/representations.js";
 import * as funs from "../functions.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 import { Plot } from "./Plot.js";
-import { DataFrame } from "../DataFrame.js";
 
 export class SquarePlot extends Plot {
   constructor(
     id: string,
     element: HTMLDivElement,
-    nPlots: number,
-    data: DataFrame,
     mapping: dtstr.Mapping,
-    handlers: {
-      marker: hndl.MarkerHandler;
-      keypress: hndl.KeypressHandler;
-      state: hndl.StateHandler;
-    }
+    globals: dtstr.Globals
   ) {
-    super(id, element, nPlots, mapping, handlers);
-
+    super(id, element, mapping, globals);
     this.wranglers = {
-      identity: new Wrangler(data, mapping, handlers.marker)
+      identity: new Wrangler(globals.data, mapping, globals.handlers.marker)
         .splitBy("x", "y")
         .splitWhat("size")
         .doWithin("by", funs.unique)
