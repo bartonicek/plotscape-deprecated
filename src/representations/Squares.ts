@@ -30,8 +30,7 @@ export class Squares extends Representation {
   drawBase = (context: GraphicLayer) => {
     let [x, y, size] = this.getMappings();
     if (!x) return;
-    const { col, strokeCol, strokeWidth } = this.getPars(1);
-    const pars = { col, strokeCol, strokeWidth, alpha: this.alphaMultiplier };
+    const pars = { ...this.getPars(1), alpha: this.alphaMultiplier };
     const y0 = y.map((e, i) => e + size[i] / 2);
     const y1 = y0.map((e, i) => e - size[i]);
     context.drawBarsV(x, y1, y0, size, pars);
@@ -40,10 +39,9 @@ export class Squares extends Representation {
   drawHighlight = (context: GraphicLayer) => {
     dtstr.highlightMembershipArray.forEach((e) => {
       let [x, y, size] = this.getMappings(e);
-      const [, yBase, sizeBase] = this.getMappings();
+      const [, , sizeBase] = this.getMappings();
       if (!x) return;
-      const { col, strokeCol, strokeWidth } = this.getPars(e);
-      const pars = { col, strokeCol, strokeWidth, alpha: 1 };
+      const pars = { ...this.getPars(e), alpha: 1 };
       const y0 = y.map((e, i) => e + sizeBase[i] / 2);
       const y1 = y0.map((e, i) => e - size[i]);
       context.drawBarsV(x, y1, y0, sizeBase, pars);

@@ -1,28 +1,18 @@
 import * as dtstr from "../datastructures.js";
-import * as hndl from "../handlers/handlers.js";
 import * as scls from "../scales/scales.js";
 import * as reps from "../representations/representations.js";
-import * as auxs from "../auxiliaries/auxiliaries.js";
 import * as funs from "../functions.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 import { Plot } from "./Plot.js";
-import { DataFrame } from "../DataFrame.js";
 
 export class BubblePlot extends Plot {
-  mapping: dtstr.Mapping;
-
-  constructor(
-    id: string,
-    element: HTMLDivElement,
-    mapping: dtstr.Mapping,
-    globals: dtstr.Globals,
-    dimensions: { width: number; height: number }
-  ) {
+  constructor(plotConfig: dtstr.PlotConfig) {
+    const { data, mapping, globals } = plotConfig;
     if (!mapping.has("size")) mapping.set("size", "_indicator");
+    super(plotConfig);
 
-    super(id, element, mapping, globals, dimensions);
     this.wranglers = {
-      wrangler1: new Wrangler(globals.data, mapping, globals.handlers.marker)
+      wrangler1: new Wrangler(data, mapping, globals.marker)
         .splitBy("x", "y")
         .splitWhat("size")
         .doWithin("by", funs.unique)

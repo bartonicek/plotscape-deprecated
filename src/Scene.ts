@@ -12,6 +12,7 @@ export class Scene {
   nPlotsOfType: number[];
   plots: { [name: string]: Plot };
   plotIds: string[];
+  data: DataFrame;
   globals: dtstr.Globals;
 
   constructor(element: HTMLDivElement, data: DataFrame) {
@@ -20,30 +21,15 @@ export class Scene {
     this.nPlotsOfType = Array(dtstr.plotTypeArray.length).fill(0);
     this.plots = {};
     this.plotIds = [];
+    this.data = data;
     this.globals = {
-      nPlots: 0,
-      scaleFactor: 3,
-      data: data,
-      sceneWidth: parseInt(getComputedStyle(element).width, 10),
-      sceneHeight: parseInt(getComputedStyle(element).height, 10),
-      get plotWidth() {
-        return (
-          (0.85 * this.sceneWidth) /
-          Math.ceil(this.nPlots / Math.floor(Math.sqrt(this.nPlots)))
-        );
-      },
-      get plotHeight() {
-        return (0.85 * this.sceneHeight) / Math.floor(Math.sqrt(this.nPlots));
-      },
-      handlers: {
-        marker: new hndl.MarkerHandler(this.nObs),
-        keypress: new hndl.KeypressHandler(),
-        state: new hndl.StateHandler(),
-      },
+      size: new hndl.SizeHandler(this.element),
+      marker: new hndl.MarkerHandler(this.nObs),
+      keypress: new hndl.KeypressHandler(),
+      state: new hndl.StateHandler(),
     };
     element.classList.add("graphicDiv");
-    this.globals.handlers.state.keypressHandler =
-      this.globals.handlers.keypress;
+    this.globals.state.keypressHandler = this.globals.keypress;
 
     // Inject css
     const head = document.head;
@@ -62,7 +48,8 @@ export class Scene {
     helpPanel.classList.add("helpPanel");
 
     const helpButtonDim =
-      Math.min(this.globals.sceneWidth, this.globals.sceneHeight) * 0.05;
+      Math.min(this.globals.size.sceneWidth, this.globals.size.sceneHeight) *
+      0.05;
     helpButton.style.width = `${helpButtonDim}px`;
     helpButton.style.height = `${helpButtonDim}px`;
     helpButton.style.fontSize = `${0.5 * helpButtonDim}px`;
@@ -75,31 +62,31 @@ export class Scene {
   }
 
   addPlotWrapper = (
-    plotType: dtstr.PlotTypes,
+    type: dtstr.PlotTypes,
     mapping: Mapping,
     dimensions?: { width: number; height: number }
   ) => {
-    const { element, plotIds, plots, globals } = this;
+    const { element, data, plotIds, plots, globals } = this;
 
-    this.globals.nPlots++;
-    const plotTypeIndex = dtstr.plotTypeArray.findIndex((e) => e === plotType);
+    this.globals.size.nPlots++;
+    const plotTypeIndex = dtstr.plotTypeArray.findIndex((e) => e === type);
     this.nPlotsOfType[plotTypeIndex]++;
-    const plotId = `${plotType}${this.nPlotsOfType[plotTypeIndex]}`;
+    const id = `${type}${this.nPlotsOfType[plotTypeIndex]}`;
 
-    this.plots[plotId] = new PlotProxy(
-      plotType,
-      plotId,
-      element,
-      mapping,
-      globals,
-      dimensions
-    ) as Plot;
-    plotIds.push(plotId);
-    globals.handlers.state.plotIds.push(plotId);
-    globals.handlers.state.plotsActive.push(false);
-    globals.handlers.state.plotContainers.push(
-      this.plots[plotId].graphicContainer
-    );
+    const plotConfig = {
+      id: id,
+      element: element,
+      data: data,
+      mapping: mapping,
+      globals: globals,
+      dimensions: dimensions,
+    };
+
+    this.plots[id] = new PlotProxy(type, plotConfig) as Plot;
+    plotIds.push(id);
+    globals.state.plotIds.push(id);
+    globals.state.plotsActive.push(false);
+    globals.state.plotContainers.push(this.plots[id].graphicContainer);
 
     plotIds.forEach((e) => {
       plots[e].resize();
@@ -116,22 +103,14 @@ export class Scene {
 // a plot type (string), data, mapping, and global handlers
 class PlotProxy {
   constructor(
-    plotType: dtstr.PlotTypes,
-    ...args: [
-      id: string,
-      element: HTMLDivElement,
-      mapping: Mapping,
-      globals: {
-        nPlots: number;
-        data: DataFrame;
-        handlers: {
-          marker: hndl.MarkerHandler;
-          keypress: hndl.KeypressHandler;
-          state: hndl.StateHandler;
-        };
-      },
-      dimensions?: { height: number; width: number }
-    ]
+    type: string,
+    plotConfig: {
+      id: string;
+      element: HTMLDivElement;
+      mapping: Mapping;
+      globals: dtstr.Globals;
+      dimensions?: { height: number; width: number };
+    }
   ) {
     const plotClasses = {
       scatter: plts.ScatterPlot,
@@ -141,6 +120,6 @@ class PlotProxy {
       square: plts.SquarePlot,
       squareheat: plts.SquareHeatmap,
     };
-    return new plotClasses[plotType](...args);
+    return new plotClasses[type](plotConfig);
   }
 }

@@ -19,42 +19,29 @@ export class Points extends Representation {
     let [x, y, size] = mappings.map((e) => getMapping(e, membership));
     const radius = getPars(membership).radius;
 
-    size =
-      size.length > 0
-        ? size.map((e) => radius * e * defaultRadius * sizeMultiplier)
-        : Array.from(
-            Array(x.length),
-            (e) => radius * defaultRadius * sizeMultiplier
-          );
+    if (!size.length) {
+      size = Array(x.length).fill(radius * defaultRadius * sizeMultiplier);
+    }
+
+    if (size.length) {
+      size = size.map((e) => e * radius * defaultRadius * sizeMultiplier);
+    }
+
     return [x, y, size];
   };
 
   drawBase = (context: GraphicLayer) => {
     const [x, y, size] = this.getMappings(1);
-    const { col, strokeCol, strokeWidth } = this.getPars(1);
-    const pars = {
-      col,
-      radius: size,
-      strokeCol,
-      strokeWidth,
-      alpha: this.alphaMultiplier,
-    };
-    context.drawPoints(x, y, pars);
+    const pars = { ...this.getPars(1), alpha: this.alphaMultiplier };
+    context.drawPoints(x, y, size, pars);
   };
 
   drawHighlight = (context: GraphicLayer) => {
     dtstr.highlightMembershipArray.forEach((e) => {
       const [x, y, size] = this.getMappings(e);
       if (!(x.length > 0)) return;
-      const { col, strokeCol, strokeWidth } = this.getPars(e);
-      const pars = {
-        col,
-        radius: size,
-        strokeCol,
-        strokeWidth,
-        alpha: 1,
-      };
-      context.drawPoints(x, y, pars);
+      const pars = { ...this.getPars(e), alpha: 1 };
+      context.drawPoints(x, y, size, pars);
     });
   };
 

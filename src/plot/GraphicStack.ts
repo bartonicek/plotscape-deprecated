@@ -25,12 +25,12 @@ export class GraphicStack {
 
   get width() {
     if (this.dimensions) return this.dimensions.width;
-    return this.globals.plotWidth;
+    return this.globals.size.plotWidth;
   }
 
   get height() {
     if (this.dimensions) return this.dimensions.height;
-    return this.globals.plotHeight;
+    return this.globals.size.plotHeight;
   }
 
   initialize = () => {

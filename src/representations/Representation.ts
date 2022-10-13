@@ -1,6 +1,6 @@
 import * as dtstr from "../datastructures.js";
 import * as funs from "../functions.js";
-import { globalParameters } from "../globalparameters.js";
+import { globalParameters, RepParsWide } from "../globalparameters.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 
@@ -8,12 +8,7 @@ export class Representation {
   wrangler: Wrangler;
   plotDims: { width: number; height: number };
   scales: { [key: string]: any };
-  pars: {
-    col: string;
-    strokeCol: string;
-    strokeWidth: number;
-    radius: number;
-  }[];
+  pars: RepParsWide;
 
   sizeMultiplier: number;
   sizeLimits: { min: number; max: number };
@@ -24,7 +19,7 @@ export class Representation {
     this.wrangler = wrangler;
     this.pars = dtstr.validMembershipArray.map((e) => {
       const p = globalParameters.reps;
-      if (e === 128) return funs.accessIndexed(p, p.col.length - 1);
+      if (e === 128) return funs.accessIndexed(p, p.colour.length - 1);
       return funs.accessIndexed(p, (e & ~128) - 1);
     });
     this.sizeMultiplier = 1;

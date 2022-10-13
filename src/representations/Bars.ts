@@ -38,8 +38,7 @@ export class Bars extends Representation {
     const { y0Scalar, widthScalar, alphaMultiplier } = this;
     const y0 = Array.from(Array(x.length), (e) => y0Scalar);
     const width = Array.from(Array(x.length), (e) => widthScalar);
-    const { col, strokeCol, strokeWidth } = this.pars[0];
-    const pars = { col, strokeCol, strokeWidth, alpha: alphaMultiplier };
+    const pars = { ...this.getPars(1), alpha: alphaMultiplier };
     context.drawBarsV(x, y, y0, width, pars);
   };
 
@@ -47,11 +46,10 @@ export class Bars extends Representation {
     dtstr.highlightMembershipArray.forEach((e) => {
       const [x, y] = this.getMappings(e);
       if (!(x.length > 0)) return;
-      const { y0Scalar, widthScalar, alphaMultiplier } = this;
+      const { y0Scalar, widthScalar } = this;
       const y0 = Array.from(Array(x.length), (e) => y0Scalar);
       const width = Array.from(Array(x.length), (e) => widthScalar);
-      const { col, strokeCol, strokeWidth } = this.getPars(e);
-      const pars = { col, strokeCol, strokeWidth, alpha: 1, width };
+      const pars = { ...this.getPars(e), alpha: 1 };
       context.drawBarsV(x, y, y0, width, pars);
     });
   };

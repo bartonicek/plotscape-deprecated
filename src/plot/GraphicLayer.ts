@@ -1,12 +1,14 @@
 import * as dtstr from "../datastructures.js";
-import { globalParameters as gpars } from "../globalparameters.js";
+import {
+  globalParameters as gpars,
+  SingleValuedRepPars,
+} from "../globalparameters.js";
 
 export class GraphicLayer {
   globals: dtstr.Globals;
   dimensions: { width: number; height: number };
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
-  backgroundColour: string;
 
   constructor(
     globals: dtstr.Globals,
@@ -16,22 +18,21 @@ export class GraphicLayer {
     this.dimensions = dimensions;
     this.canvas = document.createElement("canvas");
     this.context = this.canvas.getContext("2d");
-    this.backgroundColour = gpars.bgCol;
     this.resize();
   }
 
   get width() {
     if (this.dimensions) return this.dimensions.width;
-    return this.globals.plotWidth;
+    return this.globals.size.plotWidth;
   }
 
   get height() {
     if (this.dimensions) return this.dimensions.height;
-    return this.globals.plotHeight;
+    return this.globals.size.plotHeight;
   }
 
   get scaleFactor() {
-    return this.globals.scaleFactor;
+    return this.globals.size.scaleFactor;
   }
 
   resize = () => {
@@ -53,11 +54,11 @@ export class GraphicLayer {
 
   toAlpha = (col: string, alpha: number) => {
     if (alpha === 1) return col;
-    const alpha16 = Math.floor(alpha * 255)
+    let alpha16 = Math.floor(alpha * 255)
       .toString(16)
       .toUpperCase();
-    const colString = alpha16.length < 2 ? col + "0" + alpha16 : col + alpha16;
-    return colString;
+    if (alpha16.length < 2) alpha16 = "0" + alpha16;
+    return col + alpha16;
   };
 
   drawClear = () => {
@@ -70,7 +71,7 @@ export class GraphicLayer {
   drawBackground = () => {
     const context = this.context;
     context.save();
-    context.fillStyle = gpars.bgCol;
+    context.fillStyle = gpars.plot.backgroundColour;
     context.fillRect(0, 0, this.width, this.height);
     context.restore();
   };
@@ -80,23 +81,18 @@ export class GraphicLayer {
     y: number[],
     y0: number[],
     width: number[],
-    pars = {
-      col: gpars.reps.col[0],
-      strokeCol: null,
-      strokeWidth: null,
-      alpha: 1,
-    }
+    pars: SingleValuedRepPars
   ) => {
     const [xs, ys, y0s, ws] = this.dropMissing(x, y, y0, width);
-    const { col, strokeCol, strokeWidth, alpha } = pars;
+    const { colour, strokeColour, strokeWidth, alpha } = pars;
     const context = this.context;
     context.save();
-    context.fillStyle = this.toAlpha(col, alpha);
-    context.strokeStyle = strokeCol;
+    context.fillStyle = this.toAlpha(colour, alpha);
+    context.strokeStyle = strokeColour;
     context.lineWidth = strokeWidth;
     xs.forEach((e, i) => {
-      if (col) context.fillRect(e - ws[i] / 2, ys[i], ws[i], y0s[i] - ys[i]);
-      if (strokeCol)
+      if (colour) context.fillRect(e - ws[i] / 2, ys[i], ws[i], y0s[i] - ys[i]);
+      if (strokeColour)
         context.strokeRect(e - ws[i] / 2, ys[i], ws[i], y0s[i] - ys[i]);
     });
     context.restore();
@@ -105,29 +101,20 @@ export class GraphicLayer {
   drawPoints = (
     x: number[],
     y: number[],
-    pars = {
-      col: gpars.reps.col[0],
-      radius: 5,
-      strokeCol: null,
-      strokeWidth: null,
-      alpha: 1,
-    }
+    radius: number[],
+    pars: SingleValuedRepPars
   ) => {
     const context = this.context;
-    const { col, radius, strokeCol, strokeWidth, alpha } = pars;
-    const rs =
-      typeof radius === "number"
-        ? Array.from(Array(x.length), (e) => radius)
-        : radius;
+    const { colour, strokeColour, strokeWidth, alpha } = pars;
     context.save();
-    context.fillStyle = this.toAlpha(col, alpha);
-    context.strokeStyle = strokeCol;
+    context.fillStyle = this.toAlpha(colour, alpha);
+    context.strokeStyle = strokeColour;
     context.lineWidth = strokeWidth;
     x.forEach((e, i) => {
       context.beginPath();
-      context.arc(e, y[i], rs[i] / 2, 0, Math.PI * 2);
-      strokeCol ? context.stroke() : null;
-      col ? context.fill() : null;
+      context.arc(e, y[i], radius[i] / 2, 0, Math.PI * 2);
+      if (strokeColour) context.stroke();
+      if (colour) context.fill();
     });
     context.restore();
   };
@@ -137,24 +124,18 @@ export class GraphicLayer {
     y: number[],
     h: number[],
     w: number[],
-    pars = {
-      col: gpars.reps.col[0],
-      strokeCol: null,
-      strokeWidth: null,
-      alpha: 1,
-    }
+    pars: SingleValuedRepPars
   ) => {
     const context = this.context;
-    const { col, strokeCol, strokeWidth, alpha } = pars;
+    const { colour, strokeColour, strokeWidth, alpha } = pars;
     context.save();
-    context.fillStyle = this.toAlpha(col, alpha);
-    context.strokeStyle = strokeCol;
+    context.fillStyle = this.toAlpha(colour, alpha);
+    context.strokeStyle = strokeColour;
     context.lineWidth = strokeWidth;
     x.forEach((e, i) => {
-      col ? context.fillRect(e - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]) : null;
-      strokeCol
-        ? context.strokeRect(e - w[i] / 2, y[i] - h[i] / 2, h[i], w[i])
-        : null;
+      if (colour) context.fillRect(e - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
+      if (strokeColour)
+        context.strokeRect(e - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
     });
     context.restore();
   };
@@ -209,12 +190,6 @@ export class GraphicLayer {
     context.strokeStyle = stroke;
     context.setLineDash([5, 5]);
     context.clearRect(start[0], start[1], end[0] - start[0], end[1] - start[1]);
-    // context.strokeRect(
-    //   start[0],
-    //   start[1],
-    //   end[0] - start[0],
-    //   end[1] - start[1]
-    // );
     context.restore();
   };
 }

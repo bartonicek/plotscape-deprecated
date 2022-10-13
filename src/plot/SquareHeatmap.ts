@@ -6,19 +6,13 @@ import { Wrangler } from "../wrangler/Wrangler.js";
 import { Plot } from "./Plot.js";
 
 export class SquareHeatmap extends Plot {
-  constructor(
-    id: string,
-    element: HTMLDivElement,
-    mapping: dtstr.Mapping,
-    globals: dtstr.Globals,
-    dimensions: { width: number; height: number }
-  ) {
+  constructor(plotConfig: dtstr.PlotConfig) {
+    const { data, mapping, globals } = plotConfig;
     if (!mapping.has("size")) mapping.set("size", "_indicator");
-
-    super(id, element, mapping, globals, dimensions);
+    super(plotConfig);
 
     this.wranglers = {
-      wrangler1: new Wrangler(globals.data, mapping, globals.handlers.marker)
+      wrangler1: new Wrangler(data, mapping, globals.marker)
         .splitBy("x", "y")
         .splitWhat("size")
         .doAcross("by", funs.toPretty, 10)

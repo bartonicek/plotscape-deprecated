@@ -31,19 +31,20 @@ const plotTypeArray = [
 ];
 type PlotTypes = typeof plotTypeArray[number];
 
-type Globals = {
-  nPlots: number;
-  scaleFactor: number;
-  sceneWidth: number;
-  sceneHeight: number;
-  plotWidth: number;
-  plotHeight: number;
+type PlotConfig = {
+  id: string;
+  element: HTMLDivElement;
   data: DataFrame;
-  handlers: {
-    marker: hndl.MarkerHandler;
-    keypress: hndl.KeypressHandler;
-    state: hndl.StateHandler;
-  };
+  mapping: Mapping;
+  globals: Globals;
+  dimensions?: { width: number; height: number };
+};
+
+type Globals = {
+  size: hndl.SizeHandler;
+  marker: hndl.MarkerHandler;
+  keypress: hndl.KeypressHandler;
+  state: hndl.StateHandler;
 };
 
 export {
@@ -58,5 +59,6 @@ export {
   Rect2Points,
   plotTypeArray,
   PlotTypes,
+  PlotConfig,
   Globals,
 };

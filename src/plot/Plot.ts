@@ -25,22 +25,24 @@ export class Plot extends GraphicStack {
     keypress: hndl.KeypressHandler;
   };
 
-  constructor(
-    id: string,
-    element: HTMLDivElement,
-    mapping: dtstr.Mapping,
-    globals: dtstr.Globals,
-    dimensions?: { height: number; width: number }
-  ) {
+  constructor(plotConfig: {
+    id: string;
+    element: HTMLDivElement;
+    data: DataFrame;
+    mapping: dtstr.Mapping;
+    globals: dtstr.Globals;
+    dimensions?: { width: number; height: number };
+  }) {
+    const { id, element, data, mapping, globals, dimensions } = plotConfig;
     super(element, globals, dimensions);
     this.id = id;
     this.representations = {};
     this.wranglers = {};
     this.scales = {};
     this.handlers = {
-      marker: globals.handlers.marker,
-      keypress: globals.handlers.keypress,
-      state: globals.handlers.state,
+      marker: globals.marker,
+      keypress: globals.keypress,
+      state: globals.state,
       drag: new hndl.DragHandler(this.graphicContainer),
       click: new hndl.ClickHandler(this.graphicContainer),
     };
