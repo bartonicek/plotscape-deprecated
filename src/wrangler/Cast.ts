@@ -55,34 +55,29 @@ export class Cast {
         res[indices[i]].push(acrossVec[i]);
       }
     }
-
     return res;
   };
 
-  extract = (membership: dtstr.ValidMemberships = 1) => {
+  extract = (membership?: dtstr.ValidMemberships) => {
     const { marker, allUnique, withinFun, withinArgs, acrossVec, getSplitOf } =
       this;
 
     if (membership) {
-      // Members + no split + across trans.
       if (allUnique) {
+        // Members + no split + across trans.
         return (
           acrossVec.filter((_, i) => marker.isOfMembership(i, membership)) ?? []
         );
       }
       // Members + split + across trans. + within trans.
-      return getSplitOf(membership)
-        .filter((e) => e.length > 0)
-        .flatMap((e) => withinFun(e, ...withinArgs));
+      return getSplitOf(membership).map((e) => withinFun(e, ...withinArgs));
     }
 
     // All + no split + across trans. only
     if (allUnique) return acrossVec;
 
     // All + split + across trans. + within trans.
-    return getSplitOf()
-      .filter((e) => e.length > 0)
-      .flatMap((e) => withinFun(e, ...withinArgs));
+    return getSplitOf().map((e) => withinFun(e, ...withinArgs));
   };
 
   registerAcross = (fun: Function, ...args: any[]) => {

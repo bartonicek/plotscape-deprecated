@@ -16,9 +16,9 @@ export class StateHandler extends Handler {
     this.plotIds = [];
     this.plotsActive = [];
     this.plotContainers = [];
-    this.validStates = ["not", "or", "group1", "group2"];
-    this.stateKeys = ["ControlLeft", "ShiftLeft", "Digit1", "Digit2"];
-    this.membershipArray = [1, 128, 2, 3];
+    this.validStates = ["not", "or", "group1", "group2", "group3"];
+    this.stateKeys = ["ControlLeft", "ShiftLeft", "Digit1", "Digit2", "Digit3"];
+    this.membershipArray = [1, 128, 2, 3, 4];
   }
 
   get currentId() {

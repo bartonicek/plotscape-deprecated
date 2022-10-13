@@ -1,3 +1,4 @@
+import * as plts from "./plot/plots.js";
 import * as hndl from "handlers/handlers.js";
 import { DataFrame } from "./DataFrame";
 
@@ -8,7 +9,7 @@ type VectorGeneric = (number | string | boolean)[];
 type ValidMappings = "x" | "y" | "size" | "col" | "shape" | "_indicator";
 type Mapping = Map<ValidMappings, string>;
 
-const baseMembershipArray = [1, 2, 3];
+const baseMembershipArray = [1, 2, 3, 4];
 const validMembershipArray = [
   ...baseMembershipArray,
   ...baseMembershipArray.map((e) => e + 128),
@@ -20,7 +21,14 @@ type ValidMemberships = typeof validMembershipArray[number];
 type Point = [number, number];
 type Rect2Points = [[number, number], [number, number]];
 
-const plotTypeArray = ["scatter", "bubble", "bar", "histo", "square"];
+const plotTypeArray = [
+  "scatter",
+  "bubble",
+  "bar",
+  "histo",
+  "square",
+  "squareheat",
+];
 type PlotTypes = typeof plotTypeArray[number];
 
 type Globals = {

@@ -13,16 +13,18 @@ export class HistoPlot extends Plot {
     id: string,
     element: HTMLDivElement,
     mapping: dtstr.Mapping,
-    globals: dtstr.Globals
+    globals: dtstr.Globals,
+    dimensions: { width: number; height: number }
   ) {
-    super(id, element, mapping, globals);
+    super(id, element, mapping, globals, dimensions);
+
     this.wranglers = {
-      summary: new Wrangler(globals.data, mapping, globals.handlers.marker)
+      wrangler1: new Wrangler(globals.data, mapping, globals.handlers.marker)
         .splitBy("x")
         .splitWhat("y")
         .doAcross("by", funs.bin, 10)
         .doWithin("by", funs.unique)
-        .doWithin("what", funs.length)
+        .doWithin("what", funs.sum)
         .assignIndices(),
     };
 
@@ -32,7 +34,7 @@ export class HistoPlot extends Plot {
     };
 
     this.representations = {
-      bars: new reps.Bars(this.wranglers.summary, 1),
+      bars: new reps.Bars(this.wranglers.wrangler1, 1),
     };
 
     this.initialize();

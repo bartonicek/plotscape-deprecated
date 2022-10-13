@@ -29,9 +29,10 @@ export class Plot extends GraphicStack {
     id: string,
     element: HTMLDivElement,
     mapping: dtstr.Mapping,
-    globals: dtstr.Globals
+    globals: dtstr.Globals,
+    dimensions?: { height: number; width: number }
   ) {
-    super(element, globals);
+    super(element, globals, dimensions);
     this.id = id;
     this.representations = {};
     this.wranglers = {};

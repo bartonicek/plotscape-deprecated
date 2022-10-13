@@ -21,6 +21,7 @@ export class KeypressHandler extends Handler {
       "KeyR",
       "Digit1",
       "Digit2",
+      "Digit3",
     ];
     this.redrawKeys = ["Equal", "Minus", "BracketLeft", "BracketRight", "KeyR"];
     this.pressing = false;

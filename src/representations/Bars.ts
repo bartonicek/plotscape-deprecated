@@ -14,15 +14,13 @@ export class Bars extends Representation {
     this.alphaMultiplier = 1;
   }
 
-  get y0() {
+  get y0Scalar() {
     return this.scales.y.plotMin;
   }
 
-  get width() {
-    return (
-      this.sizeMultiplier *
-      (this.getMapping("x").sort()[1] - this.getMapping("x").sort()[0])
-    );
+  get widthScalar() {
+    const x = this.getMapping("x");
+    return this.sizeMultiplier * (x.sort()[1] - x.sort()[0]);
   }
 
   defaultize = () => {
@@ -36,29 +34,31 @@ export class Bars extends Representation {
   };
 
   drawBase = (context: GraphicLayer) => {
-    const [x, y] = this.getMappings(0);
-    const { y0, width, alphaMultiplier } = this;
+    const [x, y] = this.getMappings();
+    const { y0Scalar, widthScalar, alphaMultiplier } = this;
+    const y0 = Array.from(Array(x.length), (e) => y0Scalar);
+    const width = Array.from(Array(x.length), (e) => widthScalar);
     const { col, strokeCol, strokeWidth } = this.pars[0];
-    const pars = { col, strokeCol, strokeWidth, alpha: alphaMultiplier, width };
-    context.drawBarsV(x, y, y0, pars);
+    const pars = { col, strokeCol, strokeWidth, alpha: alphaMultiplier };
+    context.drawBarsV(x, y, y0, width, pars);
   };
 
   drawHighlight = (context: GraphicLayer) => {
     dtstr.highlightMembershipArray.forEach((e) => {
       const [x, y] = this.getMappings(e);
-      // console.log(e);
-      // console.log(y);
       if (!(x.length > 0)) return;
-      const { y0, width } = this;
+      const { y0Scalar, widthScalar, alphaMultiplier } = this;
+      const y0 = Array.from(Array(x.length), (e) => y0Scalar);
+      const width = Array.from(Array(x.length), (e) => widthScalar);
       const { col, strokeCol, strokeWidth } = this.getPars(e);
       const pars = { col, strokeCol, strokeWidth, alpha: 1, width };
-      context.drawBarsV(x, y, y0, pars);
+      context.drawBarsV(x, y, y0, width, pars);
     });
   };
 
   get boundingRects() {
     const [x, y] = this.getMappings();
-    const [wh, y0] = [this.width / 2, this.scales.y.plotMin];
+    const [wh, y0] = [this.widthScalar / 2, this.y0Scalar];
     return x.map((xi, i) => [
       [xi - wh, y0],
       [xi + wh, y[i]],

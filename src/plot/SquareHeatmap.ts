@@ -5,7 +5,7 @@ import * as funs from "../functions.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 import { Plot } from "./Plot.js";
 
-export class SquarePlot extends Plot {
+export class SquareHeatmap extends Plot {
   constructor(
     id: string,
     element: HTMLDivElement,
@@ -21,6 +21,7 @@ export class SquarePlot extends Plot {
       wrangler1: new Wrangler(globals.data, mapping, globals.handlers.marker)
         .splitBy("x", "y")
         .splitWhat("size")
+        .doAcross("by", funs.toPretty, 10)
         .doWithin("by", funs.unique)
         .doWithin("what", funs.sum)
         .assignIndices(),

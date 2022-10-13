@@ -2,25 +2,34 @@ import * as dtstr from "datastructures.js";
 import { GraphicLayer } from "./GraphicLayer.js";
 
 export class GraphicStack {
-  globals: dtstr.Globals;
   graphicDiv: HTMLDivElement;
   graphicContainer: HTMLDivElement;
+  globals: dtstr.Globals;
+  dimensions: { height: number; width: number };
+
   graphicBase: GraphicLayer;
   graphicHighlight: GraphicLayer;
   graphicUser: GraphicLayer;
 
-  constructor(element: HTMLDivElement, globals: dtstr.Globals) {
-    this.globals = globals;
+  constructor(
+    element: HTMLDivElement,
+    globals: dtstr.Globals,
+    dimensions?: { height: number; width: number }
+  ) {
     this.graphicDiv = element;
     this.graphicContainer = document.createElement("div");
+    this.globals = globals;
+    this.dimensions = dimensions;
     this.initialize();
   }
 
   get width() {
+    if (this.dimensions) return this.dimensions.width;
     return this.globals.plotWidth;
   }
 
   get height() {
+    if (this.dimensions) return this.dimensions.height;
     return this.globals.plotHeight;
   }
 
@@ -31,7 +40,7 @@ export class GraphicStack {
     this.graphicContainer.setAttribute("class", "graphicContainer");
 
     graphicLayers.forEach((e) => {
-      this[e] = new GraphicLayer(this.globals);
+      this[e] = new GraphicLayer(this.globals, this.dimensions);
       this.graphicContainer.appendChild(this[e].canvas);
     });
     this.graphicBase.drawBackground();

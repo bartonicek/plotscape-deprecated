@@ -1,9 +1,7 @@
 import { Handler } from "../handlers/Handler.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 import { Representation } from "./Representation.js";
-import * as funs from "../functions.js";
 import * as dtstr from "../datastructures.js";
-import { globalParameters as gpars } from "../globalparameters.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
 
 export class Squares extends Representation {
@@ -11,33 +9,44 @@ export class Squares extends Representation {
     super(wrangler);
   }
 
-  getMappings = (membership: dtstr.ValidMemberships = 1) => {
+  getMappings = (membership?: dtstr.ValidMemberships) => {
+    const { getMapping, maxWidth, sizeMultiplier } = this;
     const mappings: dtstr.ValidMappings[] = ["x", "y", "size"];
-    let [x, y, size] = mappings.map((e) => this.getMapping(e, membership));
-    const radius = this.getPars(membership).radius;
+    let [x, y, size] = mappings.map((e) => getMapping(e, membership));
 
-    size = size
-      ? size.map((e) => radius * e * this.sizeMultiplier)
-      : Array.from(Array(x.length), (e) => radius).map(
-          (e) => e * this.sizeMultiplier
-        );
+    if (size.length > 0) {
+      size = size.map((e) => maxWidth * e * sizeMultiplier);
+    } else {
+      size = Array.from(Array(x.length), (e) => maxWidth * sizeMultiplier);
+    }
+
     return [x, y, size];
   };
 
+  get maxWidth() {
+    return Math.min(this.scales.x.intervalWidth, this.scales.y.intervalWidth);
+  }
+
   drawBase = (context: GraphicLayer) => {
-    const [x, y, size] = this.getMappings(1);
-    const { col, strokeCol, strokeWidth } = this.pars[0];
+    let [x, y, size] = this.getMappings();
+    if (!x) return;
+    const { col, strokeCol, strokeWidth } = this.getPars(1);
     const pars = { col, strokeCol, strokeWidth, alpha: this.alphaMultiplier };
-    context.drawRectsHW(x, y, size, size, pars);
+    const y0 = y.map((e, i) => e + size[i] / 2);
+    const y1 = y0.map((e, i) => e - size[i]);
+    context.drawBarsV(x, y1, y0, size, pars);
   };
 
   drawHighlight = (context: GraphicLayer) => {
     dtstr.highlightMembershipArray.forEach((e) => {
-      const [x, y, size] = this.getMappings(e);
+      let [x, y, size] = this.getMappings(e);
+      const [, yBase, sizeBase] = this.getMappings();
       if (!x) return;
       const { col, strokeCol, strokeWidth } = this.getPars(e);
       const pars = { col, strokeCol, strokeWidth, alpha: 1 };
-      context.drawRectsHW(x, y, size, size, pars);
+      const y0 = y.map((e, i) => e + sizeBase[i] / 2);
+      const y1 = y0.map((e, i) => e - size[i]);
+      context.drawBarsV(x, y1, y0, sizeBase, pars);
     });
   };
 

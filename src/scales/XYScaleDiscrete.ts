@@ -12,11 +12,6 @@ export class XYScaleDiscrete extends ScaleDiscrete {
     super(length, direction, expand);
     this.margins = margins;
     this.span = 1 - margins.lower - margins.upper;
-
-    // Shift & shrink the scale by the plot margins
-    // this.offset =
-    //   this.offset + this.direction * this.length * this.margins.lower;
-    // this.length = (1 - this.margins.lower - this.margins.upper) * this.length;
   }
 
   get offset() {
@@ -32,6 +27,12 @@ export class XYScaleDiscrete extends ScaleDiscrete {
 
   get plotMax() {
     return this.pctToUnits(1);
+  }
+
+  get intervalWidth() {
+    return Math.abs(
+      this.dataToPlot(this.values[0]) - this.dataToPlot(this.values[1])
+    );
   }
 
   dataToPlot = (data: any | any[]) => {

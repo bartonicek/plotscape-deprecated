@@ -3,12 +3,17 @@ import { globalParameters as gpars } from "../globalparameters.js";
 
 export class GraphicLayer {
   globals: dtstr.Globals;
+  dimensions: { width: number; height: number };
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   backgroundColour: string;
 
-  constructor(globals: dtstr.Globals) {
+  constructor(
+    globals: dtstr.Globals,
+    dimensions: { height: number; width: number }
+  ) {
     this.globals = globals;
+    this.dimensions = dimensions;
     this.canvas = document.createElement("canvas");
     this.context = this.canvas.getContext("2d");
     this.backgroundColour = gpars.bgCol;
@@ -16,10 +21,12 @@ export class GraphicLayer {
   }
 
   get width() {
+    if (this.dimensions) return this.dimensions.width;
     return this.globals.plotWidth;
   }
 
   get height() {
+    if (this.dimensions) return this.dimensions.height;
     return this.globals.plotHeight;
   }
 
@@ -36,17 +43,12 @@ export class GraphicLayer {
   };
 
   dropMissing = (...vectors: any[]) => {
-    let missingIndices = [...vectors].flatMap((vector) =>
-      vector
-        .flatMap((value, index) => (value === null ? index : []))
-        .sort((a, b) => a - b)
-    );
-    missingIndices = Array.from(new Set(missingIndices));
-    return [...vectors].map((vector) =>
-      vector.flatMap((value, index) =>
-        missingIndices.indexOf(index) === -1 ? value : []
-      )
-    );
+    let i = vectors[0].length;
+    while (i--) {
+      if (vectors.map((e) => e[i]).some((e) => e === null || e < 0))
+        vectors.map((e) => e.splice(i, 1));
+    }
+    return vectors;
   };
 
   toAlpha = (col: string, alpha: number) => {
@@ -76,27 +78,26 @@ export class GraphicLayer {
   drawBarsV = (
     x: number[],
     y: number[],
-    y0: number,
+    y0: number[],
+    width: number[],
     pars = {
       col: gpars.reps.col[0],
       strokeCol: null,
       strokeWidth: null,
       alpha: 1,
-      width: 50,
     }
   ) => {
-    const [xs, ys] = this.dropMissing(x, y);
-    const { col, strokeCol, strokeWidth, alpha, width } = pars;
+    const [xs, ys, y0s, ws] = this.dropMissing(x, y, y0, width);
+    const { col, strokeCol, strokeWidth, alpha } = pars;
     const context = this.context;
     context.save();
     context.fillStyle = this.toAlpha(col, alpha);
     context.strokeStyle = strokeCol;
     context.lineWidth = strokeWidth;
     xs.forEach((e, i) => {
-      col ? context.fillRect(e - width / 2, ys[i], width, y0 - ys[i]) : null;
-      strokeCol
-        ? context.strokeRect(e - width / 2, ys[i], width, y0 - ys[i])
-        : null;
+      if (col) context.fillRect(e - ws[i] / 2, ys[i], ws[i], y0s[i] - ys[i]);
+      if (strokeCol)
+        context.strokeRect(e - ws[i] / 2, ys[i], ws[i], y0s[i] - ys[i]);
     });
     context.restore();
   };
@@ -124,7 +125,7 @@ export class GraphicLayer {
     context.lineWidth = strokeWidth;
     x.forEach((e, i) => {
       context.beginPath();
-      context.arc(e, y[i], rs[i], 0, Math.PI * 2);
+      context.arc(e, y[i], rs[i] / 2, 0, Math.PI * 2);
       strokeCol ? context.stroke() : null;
       col ? context.fill() : null;
     });

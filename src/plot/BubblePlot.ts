@@ -15,11 +15,14 @@ export class BubblePlot extends Plot {
     id: string,
     element: HTMLDivElement,
     mapping: dtstr.Mapping,
-    globals: dtstr.Globals
+    globals: dtstr.Globals,
+    dimensions: { width: number; height: number }
   ) {
-    super(id, element, mapping, globals);
+    if (!mapping.has("size")) mapping.set("size", "_indicator");
+
+    super(id, element, mapping, globals, dimensions);
     this.wranglers = {
-      identity: new Wrangler(globals.data, mapping, globals.handlers.marker)
+      wrangler1: new Wrangler(globals.data, mapping, globals.handlers.marker)
         .splitBy("x", "y")
         .splitWhat("size")
         .doWithin("by", funs.unique)
@@ -34,7 +37,7 @@ export class BubblePlot extends Plot {
     };
 
     this.representations = {
-      points: new reps.Points(this.wranglers.identity),
+      points: new reps.Points(this.wranglers.wrangler1),
     };
 
     this.initialize();

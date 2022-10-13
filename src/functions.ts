@@ -1,17 +1,21 @@
-import * as datastr from "./datastructures.js";
+import * as dtstr from "./datastructures.js";
 
 const deeplyClone = (x: Object) => {
   return JSON.parse(JSON.stringify(x));
 };
 
-const isNumeric = (x: datastr.VectorGeneric) => typeof x[0] === "number";
-const identity = (x: datastr.VectorGeneric) => x;
-const length = (x: datastr.VectorGeneric) => (x.length ? x.length : 0);
-const sum = (x: number[]) => x.reduce((a, b) => a + b, 0);
-const mean = (x: number[]) =>
-  x.length > 0 ? x.reduce((a, b) => a + b) / x.length : null;
-const min = (x: number[]) => (x.length > 0 ? Math.min(...x) : null);
-const max = (x: number[]) => (x.length > 0 ? Math.max(...x) : null);
+const isNumeric = (x: dtstr.VectorGeneric) => typeof x[0] === "number";
+const identity = (x: dtstr.VectorGeneric) => x;
+const length = (x: dtstr.VectorGeneric) => (x.length ? x.length : 0);
+
+const sum = (x: number[]) => {
+  if (!x.length) return null;
+  return x.reduce((a, b) => a + b, 0);
+};
+
+const mean = (x: number[]) => (x.length ? sum(x) / x.length : null);
+const min = (x: number[]) => (x.length ? Math.min(...x) : null);
+const max = (x: number[]) => (x.length ? Math.max(...x) : null);
 
 const capitalize = (x: string | string[]) => {
   return typeof x === "string"
@@ -20,6 +24,7 @@ const capitalize = (x: string | string[]) => {
 };
 
 const bin = (x: number[], n = 5) => {
+  if (!x.length) return null;
   const range = Math.max(...x) - Math.min(...x);
   const width = range / n;
   const breaks = Array.from(Array(n + 1), (e, i) => Math.min(...x) + i * width);
@@ -33,23 +38,23 @@ const bin = (x: number[], n = 5) => {
 };
 
 const quantile = (x: number[], q: number | number[]) => {
+  if (!x.length) return null;
   const sorted = x.sort((a, b) => a - b);
   if (typeof q === "number") {
     // For a single quantile
     const pos = q * (sorted.length - 1);
     const { lwr, uppr } = { lwr: Math.floor(pos), uppr: Math.ceil(pos) };
     return sorted[lwr] + (pos % 1) * (sorted[uppr] - sorted[lwr]);
-  } else {
-    // For multiple quantiles
-    const pos = q.map((e) => e * (sorted.length - 1));
-    const { lwr, uppr } = {
-      lwr: pos.map((e) => Math.floor(e)),
-      uppr: pos.map((e) => Math.ceil(e)),
-    };
-    return pos.map(
-      (e, i) => sorted[lwr[i]] + (e % 1) * (sorted[uppr[i]] - sorted[lwr[i]])
-    );
   }
+  // For multiple quantiles
+  const pos = q.map((e) => e * (sorted.length - 1));
+  const { lwr, uppr } = {
+    lwr: pos.map((e) => Math.floor(e)),
+    uppr: pos.map((e) => Math.ceil(e)),
+  };
+  return pos.map(
+    (e, i) => sorted[lwr[i]] + (e % 1) * (sorted[uppr[i]] - sorted[lwr[i]])
+  );
 };
 
 const gatedMultiply = (
@@ -62,7 +67,7 @@ const gatedMultiply = (
   return a * b;
 };
 
-const which = (x: datastr.VectorGeneric, value: any) => {
+const which = (x: dtstr.VectorGeneric, value: any) => {
   return x.map((e, i) => (e === value ? i : NaN)).filter((e) => !isNaN(e));
 };
 
@@ -73,7 +78,6 @@ const match = <Type>(x: Type[], values: Type[]): number[] | null => {
 const unique = <Type>(x: Type[]): Type | Type[] | null => {
   const uniqueArray = Array.from(new Set(x));
   return uniqueArray.length === 1 ? uniqueArray[0] : uniqueArray;
-  //return x.filter((e, i) => x.indexOf(e) === i);    Slower
 };
 
 const accessDeep = (obj: Object, ...props: string[]) => {
@@ -127,14 +131,22 @@ const prettyBreaks = (x: number[], n = 4) => {
     Array(Math.floor((maxNeat - minNeat) / unitNeat - 1)),
     (e, i) => minNeat + (i + 1) * unitNeat
   );
-  // const middle = [];
-  // let i = (maxNeat - minNeat) / unitNeat - 1;
-  // while (i--) middle[i] = minNeat + (i + 1) * unitNeat;
-
   const breaks = [minNeat, ...middle, maxNeat].map((e) =>
     parseFloat(e.toFixed(4))
   );
   return big ? breaks.map((e) => e.toExponential()) : breaks;
+};
+
+// Finds the nearest pretty number for each
+const toPretty = (x: number[], n = 5) => {
+  const breaks = prettyBreaks(x, n);
+  let i = x.length;
+  const res = Array(x.length);
+  while (i--) {
+    const x2 = breaks.map((e) => (e - x[i]) ** 2);
+    res[i] = breaks[x2.indexOf(Math.min(...x2))];
+  }
+  return res;
 };
 
 // arrEqual: Checks if two arrays are deeply equal
@@ -151,7 +163,7 @@ const arrTranspose = (data: any[][]) => {
 // uniqueRows: Gets the unique rows & corresponding row ids of a dataframe
 // (stored as an array of arrays/list of columns).
 // Runs faster than a for loop, even though the rows are created twice
-const uniqueRows = (data: any[][]) => {
+const uniqueRows = (data: dtstr.VectorGeneric[][]) => {
   // Transpose dataframe from array of cols to array of rows & turn the rows into strings
   const stringDataT = data[0].map((_, i) =>
     JSON.stringify(data.map((row) => row[i]))
@@ -168,7 +180,7 @@ const uniqueRows = (data: any[][]) => {
   return { values, indices };
 };
 
-const uniqueRowIds = (data: any[][]) => {
+const uniqueRowIds = (data: dtstr.VectorGeneric[][]) => {
   // Transpose dataframe from array of cols to array of rows & turn the rows into strings
   const stringRows = data[0].map((_, i) =>
     JSON.stringify(data.map((row) => row[i]))
@@ -267,6 +279,7 @@ export {
   accessUnpeel,
   accessIndexed,
   prettyBreaks,
+  toPretty,
   arrEqual,
   arrTranspose,
   uniqueRows,

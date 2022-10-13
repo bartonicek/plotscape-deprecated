@@ -14,26 +14,28 @@ export class ScatterPlot extends Plot {
     id: string,
     element: HTMLDivElement,
     mapping: dtstr.Mapping,
-    globals: dtstr.Globals
+    globals: dtstr.Globals,
+    dimensions: { width: number; height: number }
   ) {
-    super(id, element, mapping, globals);
+    super(id, element, mapping, globals, dimensions);
 
     this.mapping = mapping;
     this.wranglers = {
-      identity: new Wrangler(
+      wrangler1: new Wrangler(
         globals.data,
         mapping,
         globals.handlers.marker
-      ).extractAsIs("x", "y"),
+      ).extractAsIs(...mapping.keys()),
     };
 
     this.scales = {
       x: new scls.XYScaleContinuous(this.width),
       y: new scls.XYScaleContinuous(this.height, -1),
+      ...(mapping.get("size") && { size: new scls.AreaScaleContinuous(1) }),
     };
 
     this.representations = {
-      points: new reps.Points(this.wranglers.identity),
+      points: new reps.Points(this.wranglers.wrangler1),
     };
 
     this.initialize();

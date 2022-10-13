@@ -14,12 +14,13 @@ export class BarPlot extends Plot {
     id: string,
     element: HTMLDivElement,
     mapping: dtstr.Mapping,
-    globals: dtstr.Globals
+    globals: dtstr.Globals,
+    dimensions?: { width: number; height: number }
   ) {
-    super(id, element, mapping, globals);
+    super(id, element, mapping, globals, dimensions);
     this.mapping = mapping;
     this.wranglers = {
-      summary: new Wrangler(globals.data, mapping, globals.handlers.marker)
+      wrangler1: new Wrangler(globals.data, mapping, globals.handlers.marker)
         .splitBy("x")
         .splitWhat("y")
         .doWithin("by", funs.unique)
@@ -33,7 +34,7 @@ export class BarPlot extends Plot {
     };
 
     this.representations = {
-      bars: new reps.Bars(this.wranglers.summary, 0.8),
+      bars: new reps.Bars(this.wranglers.wrangler1, 0.8),
     };
     this.initialize();
   }

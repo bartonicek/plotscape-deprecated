@@ -4,6 +4,7 @@ import * as plts from "./plot/plots.js";
 import { Plot } from "./plot/Plot.js";
 import { Mapping } from "./Mapping.js";
 import { DataFrame } from "./DataFrame.js";
+import { helpPanelText } from "./helppaneltext.js";
 
 export class Scene {
   element: HTMLDivElement;
@@ -55,9 +56,9 @@ export class Scene {
     // Add help button and panel
     const helpButton = document.createElement("button");
     const helpPanel = document.createElement("div");
-    helpButton.innerText = "?";
+    helpButton.innerText = `?`;
     helpButton.classList.add("buttonHelp");
-    helpPanel.innerText = "Hello, welcome to Plotscape";
+    helpPanel.innerHTML = helpPanelText;
     helpPanel.classList.add("helpPanel");
 
     const helpButtonDim =
@@ -73,7 +74,11 @@ export class Scene {
     });
   }
 
-  addPlotWrapper = (plotType: dtstr.PlotTypes, mapping: Mapping) => {
+  addPlotWrapper = (
+    plotType: dtstr.PlotTypes,
+    mapping: Mapping,
+    dimensions?: { width: number; height: number }
+  ) => {
     const { element, plotIds, plots, globals } = this;
 
     this.globals.nPlots++;
@@ -86,7 +91,8 @@ export class Scene {
       plotId,
       element,
       mapping,
-      globals
+      globals,
+      dimensions
     ) as Plot;
     plotIds.push(plotId);
     globals.handlers.state.plotIds.push(plotId);
@@ -95,12 +101,11 @@ export class Scene {
       this.plots[plotId].graphicContainer
     );
 
-    if (plotIds.length > 1) {
-      plotIds.forEach((e) => {
-        plots[e].resize();
-        plots[e].drawRedraw();
-      });
-    }
+    plotIds.forEach((e) => {
+      plots[e].resize();
+      plots[e].drawRedraw();
+    });
+
     return this;
   };
 
@@ -124,7 +129,8 @@ class PlotProxy {
           keypress: hndl.KeypressHandler;
           state: hndl.StateHandler;
         };
-      }
+      },
+      dimensions?: { height: number; width: number }
     ]
   ) {
     const plotClasses = {
@@ -133,6 +139,7 @@ class PlotProxy {
       bar: plts.BarPlot,
       histo: plts.HistoPlot,
       square: plts.SquarePlot,
+      squareheat: plts.SquareHeatmap,
     };
     return new plotClasses[plotType](...args);
   }

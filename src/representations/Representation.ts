@@ -41,7 +41,7 @@ export class Representation {
 
   getMapping = (
     mapping: dtstr.ValidMappings,
-    membership: dtstr.ValidMemberships = 1
+    membership?: dtstr.ValidMemberships
   ) => {
     let res = this.wrangler[mapping]?.extract(membership);
     res = this.scales[mapping]?.dataToPlot(res);

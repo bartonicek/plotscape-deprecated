@@ -32,6 +32,8 @@ export class ScaleDiscrete extends Scale {
   };
 
   dataToUnits = (x: any | any[]) => {
+    if (x == null) return null;
+
     const { values, length, direction, positions, offset } = this;
     const xString = this.toString(x);
     const valuesString = this.toString(values);

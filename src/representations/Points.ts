@@ -9,15 +9,23 @@ export class Points extends Representation {
     super(wrangler);
   }
 
+  get defaultRadius() {
+    return Math.min(this.scales.x.length, this.scales.y.length) / 20;
+  }
+
   getMappings = (membership: dtstr.ValidMemberships) => {
+    const { getMapping, getPars, defaultRadius, sizeMultiplier } = this;
     const mappings: dtstr.ValidMappings[] = ["x", "y", "size"];
-    let [x, y, size] = mappings.map((e) => this.getMapping(e, membership));
-    const radius = this.getPars(membership).radius;
+    let [x, y, size] = mappings.map((e) => getMapping(e, membership));
+    const radius = getPars(membership).radius;
 
     size =
       size.length > 0
-        ? size.map((e) => radius * e * this.sizeMultiplier)
-        : Array.from(Array(x.length), (e) => radius * this.sizeMultiplier);
+        ? size.map((e) => radius * e * defaultRadius * sizeMultiplier)
+        : Array.from(
+            Array(x.length),
+            (e) => radius * defaultRadius * sizeMultiplier
+          );
     return [x, y, size];
   };
 

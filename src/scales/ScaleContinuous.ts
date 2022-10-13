@@ -35,31 +35,52 @@ export class ScaleContinuous extends Scale {
   };
 
   pctToData = (pct: number | number[]) => {
+    if (pct === null) return null;
+
     const { dataMin, range } = this;
-    return typeof pct === "number"
-      ? dataMin + pct * range
-      : pct.map((e) => dataMin + e * range);
+    if (typeof pct === "number") return dataMin + pct * range;
+
+    return pct.map((e) => {
+      if (e === null) return null;
+      return dataMin + e * range;
+    });
   };
 
   dataToPct = (data: number | number[]) => {
+    if (data === null) return null;
+
     const { dataMin, range } = this;
-    return typeof data === "number"
-      ? (data - dataMin) / range
-      : data.map((e) => (e - dataMin) / range);
+    if (typeof data === "number") return (data - dataMin) / range;
+
+    return data.map((e) => {
+      if (e === null) return null;
+      return (e - dataMin) / range;
+    });
   };
 
   dataToUnits = (data: number | number[]) => {
-    const { dataMin, length, offset, direction, range } = this;
+    if (data === null) return null;
 
-    return typeof data === "number"
-      ? offset + (direction * length * (data - dataMin)) / range
-      : data.map((e) => offset + direction * length * ((e - dataMin) / range));
+    const { dataMin, length, offset, direction, range } = this;
+    if (typeof data === "number")
+      return offset + (direction * length * (data - dataMin)) / range;
+
+    return data.map((e) => {
+      if (e === null) return null;
+      return offset + direction * length * ((e - dataMin) / range);
+    });
   };
 
   unitsToData = (units: number | number[]) => {
+    if (units === null) return null;
+
     const { dataMin, length, offset, direction, range } = this;
-    return typeof units === "number"
-      ? dataMin + (direction * range * (units - offset)) / length
-      : units.map((e) => dataMin + direction * range * ((e - offset) / length));
+    if (typeof units === "number")
+      return dataMin + (direction * range * (units - offset)) / length;
+
+    return units.map((e) => {
+      if (e === null) return null;
+      return dataMin + direction * range * ((e - offset) / length);
+    });
   };
 }
