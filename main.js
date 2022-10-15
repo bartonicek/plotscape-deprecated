@@ -12,7 +12,6 @@ const scene = new PLOTSCAPE.Scene(div1, data)
     "scatter",
     new PLOTSCAPE.Mapping(["x", "x"], ["y", "y"], ["size", "y"])
   )
-  .addPlotWrapper("bar", new PLOTSCAPE.Mapping(["x", "x"], ["y", "y"]))
   .addPlotWrapper(
     "square",
     new PLOTSCAPE.Mapping(["x", "x"], ["y", "y"], ["size", "_indicator"]),

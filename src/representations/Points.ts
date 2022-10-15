@@ -10,7 +10,7 @@ export class Points extends Representation {
   }
 
   get defaultRadius() {
-    return Math.min(this.scales.x.length, this.scales.y.length) / 20;
+    return Math.min(this.scales.x.length, this.scales.y.length) / 50;
   }
 
   getMappings = (membership: dtstr.ValidMemberships) => {

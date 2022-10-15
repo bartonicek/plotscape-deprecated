@@ -9,7 +9,7 @@ export class StateHandler extends Handler {
   plotContainers: any[];
   validStates: string[];
   stateKeys: string[];
-  membershipArray: number[];
+  membershipArray: dtstr.ValidMemberships[];
 
   constructor() {
     super();
@@ -23,11 +23,16 @@ export class StateHandler extends Handler {
 
   get currentId() {
     const { stateKeys, keypressHandler } = this;
-    return (
-      stateKeys.flatMap((e, i) =>
-        keypressHandler.currentlyPressedKeys.includes(e) ? i : []
-      )[0] ?? -1
-    );
+    let i = stateKeys.length;
+    let id: number;
+
+    while (i--) {
+      if (keypressHandler.isPressed(stateKeys[i])) {
+        id = i;
+        break;
+      }
+    }
+    return id ?? -1;
   }
 
   get current() {

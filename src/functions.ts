@@ -1,28 +1,76 @@
 import * as dtstr from "./datastructures.js";
 
+/**
+ * Copy an object with all of its (nested) properties. Use to avoid passing by reference.
+ * @param x An object.
+ * @returns A copy of `x`.
+ */
 const deeplyClone = (x: Object) => {
   return JSON.parse(JSON.stringify(x));
 };
 
-const isNumeric = (x: dtstr.VectorGeneric) => typeof x[0] === "number";
-const identity = (x: dtstr.VectorGeneric) => x;
-const length = (x: dtstr.VectorGeneric) => (x.length ? x.length : 0);
+/**
+ * Returns the length of an array
+ * @param x An array
+ * @returns Length (`number`)
+ */
+const length = (x: dtstr.VectorGeneric) => x.length;
 
+/**
+ * Return back the same array, unchanged.
+ * @param x An array of values.
+ * @returns The same array.
+ */
+const identity = (x: dtstr.VectorGeneric) => x;
+
+/**
+ * Sum an array
+ * @param x An array of numbers
+ * @returns Sum (`number`)
+ */
 const sum = (x: number[]) => {
   if (!x.length) return null;
   return x.reduce((a, b) => a + b, 0);
 };
 
+/**
+ * Take the average of an array
+ * @param x An array of numbers
+ * @returns Mean (`number`)
+ */
 const mean = (x: number[]) => (x.length ? sum(x) / x.length : null);
+
+/**
+ * Take the minimum of an array
+ * @param x An array of numbers
+ * @returns Minimum (`number`)
+ */
 const min = (x: number[]) => (x.length ? Math.min(...x) : null);
+
+/**
+ * Take the maximum of an array
+ * @param x An array of numbers
+ * @returns Maximum (`number`)
+ */
 const max = (x: number[]) => (x.length ? Math.max(...x) : null);
 
+/**
+ * Capitalize the first letter of a string or an array of strings
+ * @param x A `string` or an array of strings
+ * @returns A `string` or an array of strings, equal shape as `x`
+ */
 const capitalize = (x: string | string[]) => {
   return typeof x === "string"
     ? x.charAt(0).toUpperCase() + x.slice(1)
     : x.map((e) => e.charAt(0).toUpperCase() + e.slice(1));
 };
 
+/**
+ * Bin an array into equally sized bin and assigns each element to the nearest bin centroid
+ * @param x An array of numbers
+ * @param n Number of bins (`number`)
+ * @returns An array of bin cetroids, equal length as `x`
+ */
 const bin = (x: number[], n = 5) => {
   if (!x.length) return null;
   const range = Math.max(...x) - Math.min(...x);
@@ -37,15 +85,23 @@ const bin = (x: number[], n = 5) => {
     .map((e) => centroids[e]);
 };
 
+/**
+ * Take the quantile(s) of an array
+ * @param x An array of numbers
+ * @param q A quantile (`number`, between 0 and 1) or an array of quantiles
+ * @returns A data quantile or an array of data quantiles
+ */
 const quantile = (x: number[], q: number | number[]) => {
   if (!x.length) return null;
   const sorted = x.sort((a, b) => a - b);
+
+  // For a single quantile
   if (typeof q === "number") {
-    // For a single quantile
     const pos = q * (sorted.length - 1);
     const { lwr, uppr } = { lwr: Math.floor(pos), uppr: Math.ceil(pos) };
     return sorted[lwr] + (pos % 1) * (sorted[uppr] - sorted[lwr]);
   }
+
   // For multiple quantiles
   const pos = q.map((e) => e * (sorted.length - 1));
   const { lwr, uppr } = {
@@ -57,6 +113,13 @@ const quantile = (x: number[], q: number | number[]) => {
   );
 };
 
+/**
+ * Multiply two numbers or return a minimum or maximum limit, if the products exceeds either of them
+ * @param a A `number`
+ * @param b A `number`
+ * @param limits An object with `min` and `max` properties
+ * @returns Either `a * b` or `min` (if `a * b < min`) or `max` (if `a * b > max`)
+ */
 const gatedMultiply = (
   a: number,
   b: number,
@@ -67,6 +130,12 @@ const gatedMultiply = (
   return a * b;
 };
 
+/**
+ * Returns indices of an array that match a particular value
+ * @param x An array
+ * @param value A value to be matched
+ * @returns An array of indices
+ */
 const which = (x: dtstr.VectorGeneric, value: any) => {
   return x.map((e, i) => (e === value ? i : NaN)).filter((e) => !isNaN(e));
 };
@@ -75,7 +144,12 @@ const match = <Type>(x: Type[], values: Type[]): number[] | null => {
   return x.map((e) => values.indexOf(e));
 };
 
-const unique = <Type>(x: Type[]): Type | Type[] | null => {
+/**
+ * Returns a unique value or array of values in an array
+ * @param x An array
+ * @returns A value (if all values in `x` are the same) or an array of values
+ */
+const unique = <Type>(x: Type[]): Type[] | Type | null => {
   const uniqueArray = Array.from(new Set(x));
   return uniqueArray.length === 1 ? uniqueArray[0] : uniqueArray;
 };
@@ -260,7 +334,6 @@ const timeExecution = (fun: Function) => {
 };
 
 export {
-  isNumeric,
   identity,
   length,
   sum,

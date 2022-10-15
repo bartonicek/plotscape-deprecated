@@ -310,34 +310,78 @@ var PLOTSCAPE = (() => {
     define("functions", ["require", "exports"], function (require, exports) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
-        exports.timeExecution = exports.rectOverlap = exports.pointInRect = exports.uniqueRowIds = exports.uniqueRows = exports.arrTranspose = exports.arrEqual = exports.toPretty = exports.prettyBreaks = exports.accessIndexed = exports.accessUnpeel = exports.accessDeep = exports.throttle = exports.unique = exports.match = exports.which = exports.gatedMultiply = exports.quantile = exports.bin = exports.capitalize = exports.max = exports.min = exports.mean = exports.sum = exports.length = exports.identity = exports.isNumeric = void 0;
+        exports.timeExecution = exports.rectOverlap = exports.pointInRect = exports.uniqueRowIds = exports.uniqueRows = exports.arrTranspose = exports.arrEqual = exports.toPretty = exports.prettyBreaks = exports.accessIndexed = exports.accessUnpeel = exports.accessDeep = exports.throttle = exports.unique = exports.match = exports.which = exports.gatedMultiply = exports.quantile = exports.bin = exports.capitalize = exports.max = exports.min = exports.mean = exports.sum = exports.length = exports.identity = void 0;
+        /**
+         * Copy an object with all of its (nested) properties. Use to avoid passing by reference.
+         * @param x An object.
+         * @returns A copy of `x`.
+         */
         const deeplyClone = (x) => {
             return JSON.parse(JSON.stringify(x));
         };
-        const isNumeric = (x) => typeof x[0] === "number";
-        exports.isNumeric = isNumeric;
+        /**
+         * Returns the length of an array
+         * @param x An array
+         * @returns Length (`number`)
+         */
+        const length = (x) => x.length;
+        exports.length = length;
+        /**
+         * Return back the same array, unchanged.
+         * @param x An array of values.
+         * @returns The same array.
+         */
         const identity = (x) => x;
         exports.identity = identity;
-        const length = (x) => (x.length ? x.length : 0);
-        exports.length = length;
+        /**
+         * Sum an array
+         * @param x An array of numbers
+         * @returns Sum (`number`)
+         */
         const sum = (x) => {
             if (!x.length)
                 return null;
             return x.reduce((a, b) => a + b, 0);
         };
         exports.sum = sum;
+        /**
+         * Take the average of an array
+         * @param x An array of numbers
+         * @returns Mean (`number`)
+         */
         const mean = (x) => (x.length ? sum(x) / x.length : null);
         exports.mean = mean;
+        /**
+         * Take the minimum of an array
+         * @param x An array of numbers
+         * @returns Minimum (`number`)
+         */
         const min = (x) => (x.length ? Math.min(...x) : null);
         exports.min = min;
+        /**
+         * Take the maximum of an array
+         * @param x An array of numbers
+         * @returns Maximum (`number`)
+         */
         const max = (x) => (x.length ? Math.max(...x) : null);
         exports.max = max;
+        /**
+         * Capitalize the first letter of a string or an array of strings
+         * @param x A `string` or an array of strings
+         * @returns A `string` or an array of strings, equal shape as `x`
+         */
         const capitalize = (x) => {
             return typeof x === "string"
                 ? x.charAt(0).toUpperCase() + x.slice(1)
                 : x.map((e) => e.charAt(0).toUpperCase() + e.slice(1));
         };
         exports.capitalize = capitalize;
+        /**
+         * Bin an array into equally sized bin and assigns each element to the nearest bin centroid
+         * @param x An array of numbers
+         * @param n Number of bins (`number`)
+         * @returns An array of bin cetroids, equal length as `x`
+         */
         const bin = (x, n = 5) => {
             if (!x.length)
                 return null;
@@ -353,12 +397,18 @@ var PLOTSCAPE = (() => {
                 .map((e) => centroids[e]);
         };
         exports.bin = bin;
+        /**
+         * Take the quantile(s) of an array
+         * @param x An array of numbers
+         * @param q A quantile (`number`, between 0 and 1) or an array of quantiles
+         * @returns A data quantile or an array of data quantiles
+         */
         const quantile = (x, q) => {
             if (!x.length)
                 return null;
             const sorted = x.sort((a, b) => a - b);
+            // For a single quantile
             if (typeof q === "number") {
-                // For a single quantile
                 const pos = q * (sorted.length - 1);
                 const { lwr, uppr } = { lwr: Math.floor(pos), uppr: Math.ceil(pos) };
                 return sorted[lwr] + (pos % 1) * (sorted[uppr] - sorted[lwr]);
@@ -372,6 +422,13 @@ var PLOTSCAPE = (() => {
             return pos.map((e, i) => sorted[lwr[i]] + (e % 1) * (sorted[uppr[i]] - sorted[lwr[i]]));
         };
         exports.quantile = quantile;
+        /**
+         * Multiply two numbers or return a minimum or maximum limit, if the products exceeds either of them
+         * @param a A `number`
+         * @param b A `number`
+         * @param limits An object with `min` and `max` properties
+         * @returns Either `a * b` or `min` (if `a * b < min`) or `max` (if `a * b > max`)
+         */
         const gatedMultiply = (a, b, limits) => {
             if (a * b < limits.min)
                 return limits.min;
@@ -380,6 +437,12 @@ var PLOTSCAPE = (() => {
             return a * b;
         };
         exports.gatedMultiply = gatedMultiply;
+        /**
+         * Returns indices of an array that match a particular value
+         * @param x An array
+         * @param value A value to be matched
+         * @returns An array of indices
+         */
         const which = (x, value) => {
             return x.map((e, i) => (e === value ? i : NaN)).filter((e) => !isNaN(e));
         };
@@ -1159,7 +1222,7 @@ var PLOTSCAPE = (() => {
                 };
             }
             get defaultRadius() {
-                return Math.min(this.scales.x.length, this.scales.y.length) / 20;
+                return Math.min(this.scales.x.length, this.scales.y.length) / 50;
             }
             get boundingRects() {
                 const [x, y, size] = this.getMappings(1);
@@ -1567,9 +1630,16 @@ var PLOTSCAPE = (() => {
                 this.membershipArray = [1, 128, 2, 3, 4];
             }
             get currentId() {
-                var _a;
                 const { stateKeys, keypressHandler } = this;
-                return ((_a = stateKeys.flatMap((e, i) => keypressHandler.currentlyPressedKeys.includes(e) ? i : [])[0]) !== null && _a !== void 0 ? _a : -1);
+                let i = stateKeys.length;
+                let id;
+                while (i--) {
+                    if (keypressHandler.isPressed(stateKeys[i])) {
+                        id = i;
+                        break;
+                    }
+                }
+                return id !== null && id !== void 0 ? id : -1;
             }
             get current() {
                 return this.validStates[this.currentId];
@@ -2072,13 +2142,14 @@ var PLOTSCAPE = (() => {
         exports.plotTypeArray = exports.highlightMembershipArray = exports.validMembershipArray = exports.baseMembershipArray = void 0;
         const baseMembershipArray = [1, 2, 3, 4];
         exports.baseMembershipArray = baseMembershipArray;
+        const transientMembershipArray = [129, 130, 131, 132];
         const validMembershipArray = [
             ...baseMembershipArray,
-            ...baseMembershipArray.map((e) => e + 128),
+            ...transientMembershipArray,
             128,
         ];
         exports.validMembershipArray = validMembershipArray;
-        const highlightMembershipArray = validMembershipArray.filter((e) => e !== 1);
+        const [, ...highlightMembershipArray] = validMembershipArray;
         exports.highlightMembershipArray = highlightMembershipArray;
         const plotTypeArray = [
             "scatter",
