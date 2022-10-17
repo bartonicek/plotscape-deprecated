@@ -1,22 +1,29 @@
 import { Scale } from "./Scale.js";
 
 export class ScaleContinuous extends Scale {
-  zero: boolean;
+  includeZero: boolean;
   data: number[] = [];
 
-  constructor(length: number, direction = 1, zero = false, expand = 0.1) {
+  constructor(
+    length: number,
+    direction = 1,
+    includeZero = false,
+    expand = 0.1
+  ) {
     super(length, direction, expand);
-    this.zero = zero;
+    this.includeZero = includeZero;
   }
 
   registerData = (data: number[]) => {
-    this.data = this.zero ? [].concat([0], data) : data;
+    this.data = this.includeZero
+      ? [0, Math.max(...data)]
+      : [Math.min(...data), Math.max(...data)];
     return this;
   };
 
   get dataMin() {
     const { data, expand } = this;
-    return this.zero
+    return this.includeZero
       ? 0
       : Math.min(...data) - expand * (Math.max(...data) - Math.min(...data));
   }

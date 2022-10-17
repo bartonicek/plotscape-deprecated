@@ -21,12 +21,12 @@
   },
   "homepage": "https://github.com/bartonicek/plotscape#readme",
   "dependencies": {
+  },
+  "devDependencies": {
+    "typedoc": "^0.23.16",
     "run": "^1.4.0",
     "run-all": "^1.0.1",
     "typescript-bundle": "^1.0.18",
     "uglify-js": "^3.17.1"
-  },
-  "devDependencies": {
-    "typedoc": "^0.23.16"
   }
 }

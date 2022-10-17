@@ -21,9 +21,7 @@ export class Points extends Representation {
 
     if (!size.length) {
       size = Array(x.length).fill(radius * defaultRadius * sizeMultiplier);
-    }
-
-    if (size.length) {
+    } else {
       size = size.map((e) => e * radius * defaultRadius * sizeMultiplier);
     }
 

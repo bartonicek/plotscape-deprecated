@@ -70,11 +70,13 @@ var PLOTSCAPE = (() => {
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.ScaleContinuous = void 0;
         class ScaleContinuous extends Scale_js_1.Scale {
-            constructor(length, direction = 1, zero = false, expand = 0.1) {
+            constructor(length, direction = 1, includeZero = false, expand = 0.1) {
                 super(length, direction, expand);
                 this.data = [];
                 this.registerData = (data) => {
-                    this.data = this.zero ? [].concat([0], data) : data;
+                    this.data = this.includeZero
+                        ? [0, Math.max(...data)]
+                        : [Math.min(...data), Math.max(...data)];
                     return this;
                 };
                 this.inRange = (x) => {
@@ -128,11 +130,11 @@ var PLOTSCAPE = (() => {
                         return dataMin + direction * range * ((e - offset) / length);
                     });
                 };
-                this.zero = zero;
+                this.includeZero = includeZero;
             }
             get dataMin() {
                 const { data, expand } = this;
-                return this.zero
+                return this.includeZero
                     ? 0
                     : Math.min(...data) - expand * (Math.max(...data) - Math.min(...data));
             }
@@ -451,6 +453,11 @@ var PLOTSCAPE = (() => {
             return x.map((e) => values.indexOf(e));
         };
         exports.match = match;
+        /**
+         * Returns a unique value or array of values in an array
+         * @param x An array
+         * @returns A value (if all values in `x` are the same) or an array of values
+         */
         const unique = (x) => {
             const uniqueArray = Array.from(new Set(x));
             return uniqueArray.length === 1 ? uniqueArray[0] : uniqueArray;
@@ -1201,7 +1208,7 @@ var PLOTSCAPE = (() => {
                     if (!size.length) {
                         size = Array(x.length).fill(radius * defaultRadius * sizeMultiplier);
                     }
-                    if (size.length) {
+                    else {
                         size = size.map((e) => e * radius * defaultRadius * sizeMultiplier);
                     }
                     return [x, y, size];

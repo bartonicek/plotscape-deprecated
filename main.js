@@ -26,3 +26,7 @@ const scene = new PLOTSCAPE.Scene(div1, data)
 //     return this.functions.reduce((a, b) => b(a), x);
 //   };
 // }
+
+const bb = document.body.querySelector(".graphicDiv");
+
+console.log(scene.plots.scatter1.graphicBase.height);
