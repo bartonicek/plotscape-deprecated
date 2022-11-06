@@ -24,11 +24,18 @@ export class Squares extends Representation {
   };
 
   get maxWidth() {
-    return Math.min(this.scales.x.intervalWidth, this.scales.y.intervalWidth);
+    const { x, y } = this.scales;
+    if (x.continuous || y.continuous) {
+      return Math.min(
+        (x.plotMax - x.plotMin) / 10,
+        (y.plotMin - y.plotMax) / 10
+      );
+    }
+    return Math.min(x.intervalWidth, y.intervalWidth);
   }
 
   drawBase = (context: GraphicLayer) => {
-    let [x, y, size] = this.getMappings();
+    let [x, y, size] = this.getMappings(1);
     if (!x) return;
     const pars = { ...this.getPars(1), alpha: this.alphaMultiplier };
     const y0 = y.map((e, i) => e + size[i] / 2);

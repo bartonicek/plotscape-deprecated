@@ -5,34 +5,27 @@ import {
 } from "../globalparameters.js";
 
 export class GraphicLayer {
-  globals: dtstr.Globals;
-  dimensions: { width: number; height: number };
+  containerDiv: HTMLDivElement;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
 
-  constructor(
-    globals: dtstr.Globals,
-    dimensions: { height: number; width: number }
-  ) {
-    this.globals = globals;
-    this.dimensions = dimensions;
+  constructor(containerDiv: HTMLDivElement) {
+    this.containerDiv = containerDiv;
     this.canvas = document.createElement("canvas");
     this.context = this.canvas.getContext("2d");
     this.resize();
   }
 
   get width() {
-    if (this.dimensions) return this.dimensions.width;
-    return this.globals.size.plotWidth;
+    return parseInt(getComputedStyle(this.containerDiv).width, 10);
   }
 
   get height() {
-    if (this.dimensions) return this.dimensions.height;
-    return this.globals.size.plotHeight;
+    return parseInt(getComputedStyle(this.containerDiv).height, 10);
   }
 
   get scaleFactor() {
-    return this.globals.size.scaleFactor;
+    return 3;
   }
 
   resize = () => {

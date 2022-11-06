@@ -1,23 +1,24 @@
 import { VectorGeneric } from "../datastructures.js";
+import { Plot } from "../main.js";
 
-export class Scale {
+export abstract class Scale {
   data: VectorGeneric;
+  plot: Plot;
   lengthOriginal: number;
   offsetOriginal: number;
-  span: number;
   direction: number;
   expand: number;
 
-  constructor(length: number, direction = 1, expand = 0.1) {
+  constructor(length: number, plot: Plot, direction = 1, expand = 0.1) {
+    this.plot = plot;
     this.lengthOriginal = length;
     this.offsetOriginal = this.direction === -1 ? length : 0;
-    this.span = 1;
     this.direction = direction;
     this.expand = expand;
   }
 
   get length() {
-    return this.lengthOriginal * this.span;
+    return this.lengthOriginal;
   }
 
   get offset() {

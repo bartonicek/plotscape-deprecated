@@ -2,8 +2,8 @@ import * as dtstr from "datastructures.js";
 import { GraphicLayer } from "./GraphicLayer.js";
 
 export class GraphicStack {
-  graphicDiv: HTMLDivElement;
-  graphicContainer: HTMLDivElement;
+  sceneDiv: HTMLDivElement;
+  containerDiv: HTMLDivElement;
   globals: dtstr.Globals;
   dimensions: { height: number; width: number };
 
@@ -11,37 +11,29 @@ export class GraphicStack {
   graphicHighlight: GraphicLayer;
   graphicUser: GraphicLayer;
 
-  constructor(
-    element: HTMLDivElement,
-    globals: dtstr.Globals,
-    dimensions?: { height: number; width: number }
-  ) {
-    this.graphicDiv = element;
-    this.graphicContainer = document.createElement("div");
-    this.globals = globals;
-    this.dimensions = dimensions;
+  constructor(element: HTMLDivElement) {
+    this.sceneDiv = element;
+    this.containerDiv = document.createElement("div");
     this.initialize();
   }
 
   get width() {
-    if (this.dimensions) return this.dimensions.width;
-    return this.globals.size.plotWidth;
+    return parseInt(getComputedStyle(this.containerDiv).width, 10);
   }
 
   get height() {
-    if (this.dimensions) return this.dimensions.height;
-    return this.globals.size.plotHeight;
+    return parseInt(getComputedStyle(this.containerDiv).height, 10);
   }
 
   initialize = () => {
     const graphicLayers = ["graphicBase", "graphicUser", "graphicHighlight"];
 
-    this.graphicDiv.appendChild(this.graphicContainer);
-    this.graphicContainer.setAttribute("class", "graphicContainer");
+    this.sceneDiv.appendChild(this.containerDiv);
+    this.containerDiv.classList.add("plotscape-container");
 
     graphicLayers.forEach((e) => {
-      this[e] = new GraphicLayer(this.globals, this.dimensions);
-      this.graphicContainer.appendChild(this[e].canvas);
+      this[e] = new GraphicLayer(this.containerDiv);
+      this.containerDiv.appendChild(this[e].canvas);
     });
     this.graphicBase.drawBackground();
   };

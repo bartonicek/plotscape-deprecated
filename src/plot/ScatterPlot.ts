@@ -19,9 +19,11 @@ export class ScatterPlot extends Plot {
     };
 
     this.scales = {
-      x: new scls.XYScaleContinuous(this.width),
-      y: new scls.XYScaleContinuous(this.height, -1),
-      ...(mapping.get("size") && { size: new scls.AreaScaleContinuous(1) }),
+      x: new scls.XYScaleContinuous(this.width, this),
+      y: new scls.XYScaleContinuous(this.height, this, -1),
+      ...(mapping.get("size") && {
+        size: new scls.AreaScaleContinuous(1, this),
+      }),
     };
 
     this.representations = {

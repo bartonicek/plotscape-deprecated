@@ -19,8 +19,8 @@ export class Bars extends Representation {
   }
 
   get widthScalar() {
-    const x = this.getMapping("x");
-    return this.sizeMultiplier * (x.sort()[1] - x.sort()[0]);
+    const x = this.getMapping("x").sort((a, b) => a - b);
+    return this.sizeMultiplier * (x[1] - x[0]);
   }
 
   defaultize = () => {

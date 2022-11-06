@@ -1,16 +1,19 @@
 import { Auxiliary } from "./Auxiliary.js";
 import * as funs from "../functions.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
+import { Plot } from "../main.js";
 
 export class AxisText extends Auxiliary {
   along: string;
   other: string;
+  plot: Plot;
   nbreaks: number;
 
-  constructor(along: string, nbreaks?: number) {
+  constructor(along: string, plot: Plot, nbreaks?: number) {
     super();
     this.along = along;
     this.other = along === "x" ? "y" : "x";
+    this.plot = plot;
     this.nbreaks = nbreaks ?? 4;
   }
 
@@ -36,17 +39,12 @@ export class AxisText extends Auxiliary {
   };
 
   draw = (context: GraphicLayer) => {
-    const { scales, along, other, breaks } = this;
-
-    const size = Math.min(
-      ...[along, other].map(
-        (e) => 0.3 * scales[e].margins.lower * scales[e].length
-      )
-    );
+    const { scales, along, other, breaks, plot } = this;
+    const size = plot.fontsize;
 
     const intercepts = Array.from(
       Array(breaks.length),
-      (e) => scales[other].plotMin + (along === "x" ? 5 : -5)
+      (e) => scales[other].plotMin + ((along === "x" ? 1 : -1) * size) / 2
     );
 
     const coords = { x: null, y: null };
@@ -62,7 +60,6 @@ export class AxisText extends Auxiliary {
       context.context.textAlign = "right";
     }
 
-    //    context.context.textAlign = along === "x" ? "center" : "right";
     context.drawText(coords.x, coords.y, this.labels, size);
   };
 

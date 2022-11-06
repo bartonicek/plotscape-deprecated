@@ -6,8 +6,8 @@
   "scripts": {
     "bundle": "tsc-bundle tsconfig.json --outFile ./dist/bundle.js --exportAs PLOTSCAPE",
     "uglify": "uglifyjs ./dist/bundle.js --mangle -o ./dist/bundle.min.js",
-    "copy": "cp dist/bundle.js styles.css ~/Documents/2022/programming/r/plotscapeTest/inst/htmlwidgets/plotscapeTest",
-    "all": "npm-run-all bundle uglify copy"
+    "copy": "cp dist/bundle.js styles.css ~/Documents/plotscape/plotscaper/inst/htmlwidgets/plotscaper",
+    "all": "npm-run-all bundle copy"
   },
   "repository": {
     "type": "git",
@@ -20,12 +20,11 @@
     "url": "https://github.com/bartonicek/plotscape/issues"
   },
   "homepage": "https://github.com/bartonicek/plotscape#readme",
-  "dependencies": {
-  },
   "devDependencies": {
-    "typedoc": "^0.23.16",
+    "@types/node": "^17.0.29",
     "run": "^1.4.0",
     "run-all": "^1.0.1",
+    "typedoc": "^0.23.16",
     "typescript-bundle": "^1.0.18",
     "uglify-js": "^3.17.1"
   }

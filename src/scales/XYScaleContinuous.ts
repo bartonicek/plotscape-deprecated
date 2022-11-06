@@ -1,25 +1,30 @@
+import { Plot } from "../main.js";
 import { ScaleContinuous } from "./ScaleContinuous.js";
 
 export class XYScaleContinuous extends ScaleContinuous {
-  margins: { lower: number; upper: number };
-
   constructor(
     length: number,
+    plot: Plot,
     direction = 1,
     zero = false,
-    expand = 0.1,
-    margins = { lower: 0.2, upper: 0.1 }
+    expand = 0.1
   ) {
-    super(length, direction, zero, expand);
-    this.margins = margins;
-    this.span = 1 - margins.lower - margins.upper;
+    super(length, plot, direction, zero, expand);
+  }
+
+  get margins() {
+    return {
+      lower: 4 * this.plot.fontsize,
+      upper: 2 * this.plot.fontsize,
+    };
   }
 
   get offset() {
-    return (
-      this.offsetOriginal +
-      this.direction * this.lengthOriginal * this.margins.lower
-    );
+    return this.offsetOriginal + this.direction * this.margins.lower;
+  }
+
+  get length() {
+    return this.lengthOriginal - this.margins.lower - this.margins.upper;
   }
 
   get plotMin() {

@@ -45,14 +45,14 @@ const mean = (x: number[]) => (x.length ? sum(x) / x.length : null);
  * @param x An array of numbers
  * @returns Minimum (`number`)
  */
-const min = (x: number[]) => (x.length ? Math.min(...x) : null);
+const min = (x: number[]) => (x.length ? Math.min.apply(null, x) : null);
 
 /**
  * Take the maximum of an array
  * @param x An array of numbers
  * @returns Maximum (`number`)
  */
-const max = (x: number[]) => (x.length ? Math.max(...x) : null);
+const max = (x: number[]) => (x.length ? Math.max.apply(null, x) : null);
 
 /**
  * Capitalize the first letter of a string or an array of strings
@@ -73,9 +73,10 @@ const capitalize = (x: string | string[]) => {
  */
 const bin = (x: number[], n = 5) => {
   if (!x.length) return null;
-  const range = Math.max(...x) - Math.min(...x);
+  const minimum = min(x);
+  const range = max(x) - minimum;
   const width = range / n;
-  const breaks = Array.from(Array(n + 1), (e, i) => Math.min(...x) + i * width);
+  const breaks = Array.from(Array(n + 1), (e, i) => minimum + i * width);
   const centroids = breaks.map((e, i) => (e + breaks[i - 1]) / 2);
   breaks.reverse();
   centroids.shift();
@@ -170,8 +171,7 @@ const accessUnpeel = (obj: Object, ...props: string[]) => {
 };
 
 const accessIndexed = (obj: any, index: number) => {
-  // Deep-clone the object to retain structure
-  const res = deeplyClone(obj);
+  const res = deeplyClone(obj) as typeof obj; // Deeply-clone the object
   Object.keys(obj).forEach((e) => (res[e] = obj[e][index]));
   return res;
 };
@@ -186,39 +186,74 @@ const throttle = (fun: Function, delay: number) => {
   };
 };
 
+const createStripePattern = (colour: string, size: number) => {
+  const canv = document.createElement("canvas");
+  canv.width = size;
+  canv.height = size;
+  const ctx = canv.getContext("2d");
+
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, size / 4);
+  ctx.lineTo(size / 4, 0);
+  ctx.lineTo(0, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0, size);
+  ctx.lineTo(size / 4, size);
+  ctx.lineTo(size, size / 4);
+  ctx.lineTo(size, 0);
+  ctx.lineTo((3 * size) / 4, 0);
+  ctx.lineTo(0, (3 * size) / 4);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(size, size);
+  ctx.lineTo(size, (3 * size) / 4);
+  ctx.lineTo((3 * size) / 4, size);
+  ctx.lineTo(size, size);
+  ctx.closePath();
+  ctx.fill();
+
+  return ctx.createPattern(canv, "repeat");
+};
+
 // Function to construct "pretty" breaks, inspired by R's pretty()
 const prettyBreaks = (x: number[], n = 4) => {
-  const [min, max] = [Math.min(...x), Math.max(...x)];
-  const range = max - min;
+  const [minimum, maximum] = [min(x), max(x)];
+  const range = maximum - minimum;
   const unitGross = range / n;
   const base = Math.floor(Math.log10(unitGross));
-  const dists = [1, 2, 4, 5, 6, 8, 10].map(
-    (e) => (e - unitGross / 10 ** base) ** 2
-  );
-  const unitNeat =
-    10 ** base * [1, 2, 4, 5, 6, 8, 10][dists.indexOf(Math.min(...dists))];
+
+  const neatValues = [1, 2, 4, 5, 10];
+  const dists = neatValues.map((e) => (e - unitGross / 10 ** base) ** 2);
+  const unitNeat = 10 ** base * neatValues[dists.indexOf(min(dists))];
 
   const big = Math.abs(base) > 4;
-  const minNeat = Math.round(min / unitNeat) * unitNeat;
-  const maxNeat = Math.round(max / unitNeat) * unitNeat;
+  const minimumNeat = Math.ceil(minimum / unitNeat) * unitNeat;
+  const maximumNeat = Math.floor(maximum / unitNeat) * unitNeat;
   const middle = Array.from(
-    Array(Math.floor((maxNeat - minNeat) / unitNeat - 1)),
-    (e, i) => minNeat + (i + 1) * unitNeat
+    Array(Math.round((maximumNeat - minimumNeat) / unitNeat - 1)),
+    (_, i) => minimumNeat + (i + 1) * unitNeat
   );
-  const breaks = [minNeat, ...middle, maxNeat].map((e) =>
+  const breaks = [minimumNeat, ...middle, maximumNeat].map((e) =>
     parseFloat(e.toFixed(4))
   );
   return big ? breaks.map((e) => e.toExponential()) : breaks;
 };
 
 // Finds the nearest pretty number for each
-const toPretty = (x: number[], n = 5) => {
+const toPretty = (x: number[], n = 4) => {
   const breaks = prettyBreaks(x, n);
   let i = x.length;
   const res = Array(x.length);
   while (i--) {
     const x2 = breaks.map((e) => (e - x[i]) ** 2);
-    res[i] = breaks[x2.indexOf(Math.min(...x2))];
+    res[i] = breaks[x2.indexOf(min(x2))];
   }
   return res;
 };
@@ -280,50 +315,11 @@ const rectOverlap = (
   const [p1x, p1y] = [0, 1].map((e) => rect1.map((f) => f[e]));
   const [p2x, p2y] = [0, 1].map((e) => rect2.map((f) => f[e]));
   return !(
-    Math.max(...p1x) < Math.min(...p2x) ||
-    Math.min(...p1x) > Math.max(...p2x) ||
-    Math.max(...p1y) < Math.min(...p2y) ||
-    Math.min(...p1y) > Math.max(...p2y)
+    max(p1x) < min(p2x) ||
+    min(p1x) > max(p2x) ||
+    max(p1y) < min(p2y) ||
+    min(p1y) > max(p2y)
   );
-};
-
-const vecDiff = (x: number[], y: number[]) => {
-  return x.map((e, i) => e - y[i]);
-};
-
-// Function to test if point is inside polygon based on linear algebra.
-// Hopefuly works. If not, try implementing the following:
-// https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
-const insidePoly = (point: number[], polygon: number[][], distance: number) => {
-  const xmin = Math.min(...polygon.map((e) => e[0]));
-  const ymin = Math.min(...polygon.map((e) => e[1]));
-  const xmax = Math.max(...polygon.map((e) => e[0]));
-  const ymax = Math.max(...polygon.map((e) => e[1]));
-
-  if (
-    point[0] < xmin ||
-    point[0] > xmax ||
-    point[1] < ymin ||
-    point[1] > ymax
-  ) {
-    return false;
-  }
-
-  const inds1 = Array.from(Array(polygon.length), (e, i) => i);
-  const inds2 = Array.from(Array(polygon.length), (e, i) => i);
-  inds2.shift();
-  inds2.push(0);
-  const sides = inds1.map((e, i) => vecDiff(polygon[inds2[i]], polygon[e]));
-  const intersections = polygon.map((e, i) => {
-    return [
-      (point[1] - e[1]) / sides[i][1],
-      ((point[1] - e[1]) / sides[i][1]) * sides[i][0] + e[0] - point[0],
-    ];
-  });
-  const valid = intersections
-    .map((e) => e[1])
-    .filter((f) => f > 0 && f < distance);
-  return valid.length % 2 === 1;
 };
 
 const timeExecution = (fun: Function) => {
@@ -351,6 +347,7 @@ export {
   accessDeep,
   accessUnpeel,
   accessIndexed,
+  createStripePattern,
   prettyBreaks,
   toPretty,
   arrEqual,

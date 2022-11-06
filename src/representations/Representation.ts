@@ -1,6 +1,10 @@
 import * as dtstr from "../datastructures.js";
 import * as funs from "../functions.js";
-import { globalParameters, RepParsWide } from "../globalparameters.js";
+import {
+  globalParameters,
+  RepParsWide,
+  SingleValuedRepPars,
+} from "../globalparameters.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 
@@ -9,6 +13,7 @@ export class Representation {
   plotDims: { width: number; height: number };
   scales: { [key: string]: any };
   pars: RepParsWide;
+  pattern: CanvasPattern;
 
   sizeMultiplier: number;
   sizeLimits: { min: number; max: number };
@@ -22,11 +27,15 @@ export class Representation {
       if (e === 128) return funs.accessIndexed(p, p.colour.length - 1);
       return funs.accessIndexed(p, (e & ~128) - 1);
     });
+    this.pattern = funs.createStripePattern(
+      this.pars[this.pars.length - 1].colour,
+      10
+    );
     this.sizeMultiplier = 1;
     this.alphaMultiplier = 1;
     this.sizeLimits = {
-      min: 0.001,
-      max: 10,
+      min: 1 / 5,
+      max: 5,
     };
     this.alphaLimits = {
       min: 0.01,
@@ -48,6 +57,12 @@ export class Representation {
   }
 
   getPars = (membership: dtstr.ValidMemberships) => {
+    if (membership === 128 && this.wrangler.marker.anyPersistent) {
+      return {
+        ...this.pars[this.pars.length - 1],
+        colour: this.pattern,
+      } as unknown as SingleValuedRepPars;
+    }
     if (membership === 128) return this.pars[this.pars.length - 1];
     return this.pars[(membership & ~128) - 1];
   };
@@ -90,7 +105,7 @@ export class Representation {
   };
 
   // Handle generic keypress actions
-  onKeypress = (key: string) => {
+  keyPressed = (key: string) => {
     const { sizeMultiplier, sizeLimits, alphaMultiplier, alphaLimits } = this;
 
     if (key === "KeyR") this.defaultize();
@@ -110,6 +125,7 @@ export class Representation {
         alphaLimits
       );
     }
+
     if (key === "BracketRight" && alphaMultiplier)
       this.alphaMultiplier = funs.gatedMultiply(
         alphaMultiplier,

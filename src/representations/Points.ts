@@ -10,7 +10,11 @@ export class Points extends Representation {
   }
 
   get defaultRadius() {
-    return Math.min(this.scales.x.length, this.scales.y.length) / 50;
+    const { x, y } = this.scales;
+    if (x.intervalWidth && y.intervalWidth) {
+      return Math.min(x.intervalWidth, y.intervalWidth);
+    }
+    return Math.min(x.length, y.length) / 20;
   }
 
   getMappings = (membership: dtstr.ValidMemberships) => {

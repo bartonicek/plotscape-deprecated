@@ -1,23 +1,33 @@
+import * as funs from "../functions.js";
+
 export class Handler {
-  actions: string[];
+  events: string[];
   consequences: string[];
-  callbacks: (() => void)[];
-  when: string[];
+  callbacks: Map<string, ((...args: any[]) => void)[]>;
 
   constructor() {
-    this.callbacks = [];
-    this.when = [];
+    this.callbacks = new Map();
   }
 
-  registerCallbacks = (callbacks: (() => void)[], when: string[]) => {
-    this.callbacks.push(...callbacks);
-    this.when.push(...when);
-    return this;
+  registerEvents = (element: HTMLElement) => {
+    this.events.forEach((action, i) => {
+      element.addEventListener(action, (event) =>
+        funs.throttle(this[this.consequences[i]](event), 100)
+      );
+    });
   };
 
-  notifyAll = (when: keyof this) => {
-    this.callbacks
-      .filter((e, i) => this.when[i] === when)
-      .forEach((callback) => callback());
+  subscribe = (sub: Object) => {
+    const ownProperties = Object.keys(this);
+    Object.keys(sub).forEach((e) => {
+      if (typeof sub[e] === "function" && ownProperties.includes(e)) {
+        if (!this.callbacks.has(e)) this.callbacks.set(e, []);
+        this.callbacks.set(e, [...this.callbacks.get(e), sub[e]]);
+      }
+    });
+  };
+
+  publish = (name: string, ...args: any[]) => {
+    this.callbacks.get(name)?.forEach((e) => e(...args));
   };
 }

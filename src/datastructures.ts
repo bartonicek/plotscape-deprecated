@@ -1,13 +1,33 @@
-import * as plts from "./plot/plots.js";
 import * as hndl from "handlers/handlers.js";
-import { DataFrame } from "./DataFrame";
+
+type MethodsOf<Type> = Pick<
+  Type,
+  {
+    [key in keyof Type]: Type[key] extends () => void ? key : never;
+  }[keyof Type]
+>;
+
+class DataFrame {
+  [key: string]: VectorGeneric;
+  constructor(data: { [key: string]: VectorGeneric }) {
+    Object.keys(data).forEach((e) => (this[e] = data[e]));
+  }
+  get _indicator() {
+    return Array(this[Object.keys(this)[0]].length).fill(1);
+  }
+}
 
 // Generic vector type has to be dirty otherwise methods like .map()
 // and .filter() don't work
 type VectorGeneric = (number | string | boolean)[];
 
 type ValidMappings = "x" | "y" | "size" | "col" | "shape" | "_indicator";
-type Mapping = Map<ValidMappings, string>;
+class Mapping extends Map<ValidMappings, string> {
+  constructor(...mappings: [ValidMappings, string][]) {
+    super([...mappings]);
+    if (!this.has("y")) this.set("y", "_indicator");
+  }
+}
 
 type Point = [number, number];
 type Rect2Points = [[number, number], [number, number]];
@@ -38,17 +58,17 @@ type PlotConfig = {
   data: DataFrame;
   mapping: Mapping;
   globals: Globals;
-  dimensions?: { width: number; height: number };
 };
 
 type Globals = {
-  size: hndl.SizeHandler;
   marker: hndl.MarkerHandler;
   keypress: hndl.KeypressHandler;
   state: hndl.StateHandler;
 };
 
 export {
+  MethodsOf,
+  DataFrame,
   VectorGeneric,
   ValidMappings,
   Mapping,

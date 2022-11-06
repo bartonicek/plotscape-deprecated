@@ -10,7 +10,6 @@ export class KeypressHandler extends Handler {
 
   constructor() {
     super();
-    this.callbacks = [];
     this.validKeys = [
       "Equal",
       "Minus",
@@ -27,15 +26,10 @@ export class KeypressHandler extends Handler {
     this.pressing = false;
     this.lastPressed = "";
     this.currentlyPressed = Array(this.validKeys.length).fill(false);
-    this.actions = ["keydown", "keyup"];
-    this.consequences = ["keyPressed", "keyReleased"];
 
-    // Register key press/release behavior on the document body
-    this.actions.forEach((action, i) => {
-      document.body.addEventListener(action, (event) =>
-        funs.throttle(this[this.consequences[i]](event), 100)
-      );
-    });
+    this.events = ["keydown", "keyup"];
+    this.consequences = ["keyPressed", "keyReleased"];
+    this.registerEvents(document.body);
   }
 
   get isRedrawKey() {
@@ -46,13 +40,14 @@ export class KeypressHandler extends Handler {
     return this.validKeys.filter((_, i) => this.currentlyPressed[i]);
   }
 
-  keyPressed = (event: { code: string }) => {
+  keyPressed = (event: KeyboardEvent) => {
     if (this.pressing && !this.isRedrawKey) return;
     this.pressing = true;
     if (this.validKeys.includes(event.code)) {
+      event.preventDefault();
       this.lastPressed = event.code;
       this.currentlyPressed[this.validKeys.indexOf(event.code)] = true;
-      this.notifyAll("keyPressed");
+      this.publish("keyPressed", event.code);
     }
   };
 
@@ -60,7 +55,7 @@ export class KeypressHandler extends Handler {
     this.pressing = false;
     if (this.validKeys.includes(event.code)) {
       this.currentlyPressed[this.validKeys.indexOf(event.code)] = false;
-      this.notifyAll("keyReleased");
+      this.publish("keyReleased", event.code);
     }
   };
 

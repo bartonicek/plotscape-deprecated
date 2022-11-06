@@ -1,10 +1,11 @@
 export const globalParameters = {
   plot: {
+    scaleExpandFactor: 0.1,
     backgroundColour: `#f2efde`,
   },
   reps: {
-    colour: [`#cccccc`, `#1b9e77`, `#d95f02`, `#7570b3`, `#ffffffCC`],
-    strokeColour: [null, null, null, null, `#000000`],
+    colour: [`#cccccc`, `#7fc97f`, `#fdc086`, `#beaed4`, `#386cb0`],
+    strokeColour: [null, null, null, null, `#386cb0`],
     strokeWidth: [null, null, null, null, 1],
     radius: [1, 1, 1, 1, 1],
     alpha: [1, 1, 1, 1, 1],

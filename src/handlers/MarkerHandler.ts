@@ -5,15 +5,14 @@ export class MarkerHandler extends Handler {
   n: number;
   current: MembershipArray;
   past: MembershipArray;
+  anyPersistent: boolean;
 
   constructor(n: number) {
     super();
     this.n = n;
     this.current = new MembershipArray(n);
     this.past = new MembershipArray(n);
-
-    this.callbacks = [];
-    this.when = [];
+    this.anyPersistent = false;
   }
 
   isOfMembership = (index: number, membership: dtstr.ValidMemberships) => {
@@ -28,21 +27,25 @@ export class MarkerHandler extends Handler {
   };
 
   updateCurrent = (at: number[], membership: dtstr.ValidMemberships) => {
-    this.clearCurrent();
+    if (membership < 128 && at.length) this.anyPersistent = true;
+    this.clearCurrent(true);
     this.current.update(at, membership);
-    this.notifyAll("updateCurrent");
+    this.publish("updateCurrent");
   };
 
-  mergeCurrent = () => {
-    this.past.merge(this.current.asPersistent());
-    this.notifyAll("mergeCurrent");
+  mergeCurrent = (keepTransient = false) => {
+    if (!keepTransient) this.current.discardTransient();
+    this.past.merge(this.current);
   };
 
-  clearCurrent = () => {
-    this.current = new MembershipArray([...this.past.asPersistent()]);
+  clearCurrent = (keepTransient = false) => {
+    if (!keepTransient) this.past.discardTransient();
+    this.current = new MembershipArray([...this.past]);
+    this.publish("clearAll");
   };
 
   clearAll = () => {
+    this.anyPersistent = false;
     this.current.clear();
     this.past.clear();
   };
@@ -55,18 +58,9 @@ class MembershipArray extends Uint8Array {
   }
   clear = () => this.fill(1);
 
-  asPersistent = () => {
-    const res = new MembershipArray(this.length);
+  discardTransient = () => {
     let i = this.length;
-    while (i--) res[i] = this[i] & ~128;
-    return res;
-  };
-
-  asTransient = () => {
-    const res = new MembershipArray(this.length);
-    let i = this.length;
-    while (i--) res[i] = this[i] & ~128;
-    return res;
+    while (i--) this[i] = this[i] & ~128;
   };
 
   merge = (arr: MembershipArray) => {

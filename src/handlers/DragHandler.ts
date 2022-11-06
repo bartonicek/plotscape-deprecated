@@ -1,5 +1,4 @@
 import * as dtstr from "../datastructures.js";
-import * as funs from "../functions.js";
 import { Handler } from "./Handler.js";
 import { StateHandler } from "./StateHandler.js";
 
@@ -17,36 +16,28 @@ export class DragHandler extends Handler {
     this.start = [null, null];
     this.end = [null, null];
 
-    this.actions = ["mousedown", "mousemove", "mouseup"];
+    this.events = ["mousedown", "mousemove", "mouseup"];
     this.consequences = ["startDrag", "whileDrag", "endDrag"];
-
-    // Register mouse behavior on the container, throttled to 50ms
-    this.actions.forEach((action, i) => {
-      this.container.addEventListener(
-        action,
-        funs.throttle(this[this.consequences[i]], 50)
-      );
-    });
+    this.registerEvents(this.container);
   }
 
   startDrag = (event: { offsetX: number; offsetY: number }) => {
     this.dragging = true;
     this.start = [event.offsetX, event.offsetY];
-    this.notifyAll("startDrag");
+    this.publish("startDrag");
   };
 
   whileDrag = (event: { offsetX: number; offsetY: number }) => {
-    const { dragging, notifyAll } = this;
+    const { dragging, start, end } = this;
     if (dragging) {
       this.end = [event.offsetX, event.offsetY];
-      const dist =
-        (this.start[0] - this.end[0]) ** 2 + (this.start[1] - this.end[1]) ** 2;
-      if (dist > 50) notifyAll("whileDrag");
+      const dist = (start[0] - end[0]) ** 2 + (start[1] - end[1]) ** 2;
+      if (dist > 50) this.publish("whileDrag");
     }
   };
 
   endDrag = () => {
     this.dragging = false;
-    this.notifyAll("endDrag");
+    this.publish("endDrag");
   };
 }

@@ -74,7 +74,7 @@ export class HighlightRects extends Auxiliary {
       return;
     }
 
-    if (!state.inState("none")) {
+    if (!state.none) {
       context.drawClear();
       context.drawDim();
       this.past.forEach((points) => {

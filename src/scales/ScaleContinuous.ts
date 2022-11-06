@@ -1,16 +1,20 @@
+import { Plot } from "../main.js";
 import { Scale } from "./Scale.js";
 
 export class ScaleContinuous extends Scale {
+  continuous: boolean;
   includeZero: boolean;
   data: number[] = [];
 
   constructor(
     length: number,
+    plot: Plot,
     direction = 1,
     includeZero = false,
     expand = 0.1
   ) {
-    super(length, direction, expand);
+    super(length, plot, direction, expand);
+    this.continuous = true;
     this.includeZero = includeZero;
   }
 

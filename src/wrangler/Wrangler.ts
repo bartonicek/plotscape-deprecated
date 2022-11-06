@@ -1,11 +1,10 @@
 import * as dtstr from "../datastructures.js";
 import * as funs from "../functions.js";
-import { DataFrame } from "../DataFrame.js";
 import { MarkerHandler } from "../handlers/MarkerHandler.js";
 import { Cast } from "./Cast.js";
 
 export class Wrangler {
-  data: DataFrame;
+  data: dtstr.DataFrame;
   mapping: dtstr.Mapping;
   marker: MarkerHandler;
   by: Set<string>;
@@ -14,7 +13,11 @@ export class Wrangler {
   x: Cast;
   y: Cast;
 
-  constructor(data: DataFrame, mapping: dtstr.Mapping, marker: MarkerHandler) {
+  constructor(
+    data: dtstr.DataFrame,
+    mapping: dtstr.Mapping,
+    marker: MarkerHandler
+  ) {
     this.data = data;
     this.mapping = mapping;
     this.marker = marker;

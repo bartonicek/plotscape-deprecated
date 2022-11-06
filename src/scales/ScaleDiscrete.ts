@@ -1,12 +1,15 @@
 import { VectorGeneric } from "../datastructures.js";
+import { Plot } from "../main.js";
 import { Scale } from "./Scale.js";
 
 export class ScaleDiscrete extends Scale {
+  discrete: boolean;
   values: VectorGeneric;
   positions: number[];
 
-  constructor(length: number, direction = 1, expand = 0.1) {
-    super(length, direction, expand);
+  constructor(length: number, plot: Plot, direction = 1, expand = 0.1) {
+    super(length, plot, direction, expand);
+    this.discrete = true;
     this.values = [];
   }
 

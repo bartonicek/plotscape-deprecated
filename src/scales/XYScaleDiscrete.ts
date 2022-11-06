@@ -1,24 +1,24 @@
+import { Plot } from "../main.js";
 import { ScaleDiscrete } from "./ScaleDiscrete.js";
 
 export class XYScaleDiscrete extends ScaleDiscrete {
-  margins: { lower: number; upper: number };
+  constructor(length: number, plot: Plot, direction = 1, expand = 0.1) {
+    super(length, plot, direction, expand);
+  }
 
-  constructor(
-    length: number,
-    direction = 1,
-    expand = 0.1,
-    margins = { lower: 0.2, upper: 0.1 }
-  ) {
-    super(length, direction, expand);
-    this.margins = margins;
-    this.span = 1 - margins.lower - margins.upper;
+  get margins() {
+    return {
+      lower: 4 * this.plot.fontsize,
+      upper: 2 * this.plot.fontsize,
+    };
   }
 
   get offset() {
-    return (
-      this.offsetOriginal +
-      this.direction * this.lengthOriginal * this.margins.lower
-    );
+    return this.offsetOriginal + this.direction * this.margins.lower;
+  }
+
+  get length() {
+    return this.lengthOriginal - this.margins.lower - this.margins.upper;
   }
 
   get plotMin() {
@@ -30,9 +30,8 @@ export class XYScaleDiscrete extends ScaleDiscrete {
   }
 
   get intervalWidth() {
-    return Math.abs(
-      this.dataToPlot(this.values[0]) - this.dataToPlot(this.values[1])
-    );
+    const { values, dataToPlot } = this;
+    return Math.abs(dataToPlot(values[0]) - dataToPlot(values[1]));
   }
 
   dataToPlot = (data: any | any[]) => {
