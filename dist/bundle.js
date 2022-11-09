@@ -26,7 +26,13 @@ var PLOTSCAPE = (() => {
     define("functions", ["require", "exports"], function (require, exports) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
-        exports.timeExecution = exports.rectOverlap = exports.pointInRect = exports.uniqueRowIds = exports.uniqueRows = exports.arrTranspose = exports.arrEqual = exports.toPretty = exports.prettyBreaks = exports.createStripePattern = exports.accessIndexed = exports.accessUnpeel = exports.accessDeep = exports.throttle = exports.unique = exports.match = exports.which = exports.gatedMultiply = exports.quantile = exports.bin = exports.capitalize = exports.max = exports.min = exports.mean = exports.sum = exports.length = exports.identity = void 0;
+        exports.timeExecution = exports.rectOverlap = exports.pointInRect = exports.uniqueRowIds = exports.uniqueRows = exports.arrTranspose = exports.arrEqual = exports.toPretty = exports.prettyBreaks = exports.createStripePattern = exports.accessIndexed = exports.accessUnpeel = exports.accessDeep = exports.throttle = exports.unique = exports.match = exports.which = exports.gatedMultiply = exports.quantile = exports.bin = exports.capitalize = exports.max = exports.min = exports.mean = exports.sum = exports.length = exports.identity = exports.stringify = exports.deeplyClone = exports.sort = void 0;
+        const sort = (arr) => {
+            if (typeof arr[0] === "number")
+                return arr.sort((a, b) => a - b);
+            return arr.sort();
+        };
+        exports.sort = sort;
         /**
          * Copy an object with all of its (nested) properties. Use to avoid passing by reference.
          * @param x An object.
@@ -35,6 +41,18 @@ var PLOTSCAPE = (() => {
         const deeplyClone = (x) => {
             return JSON.parse(JSON.stringify(x));
         };
+        exports.deeplyClone = deeplyClone;
+        /**
+         * Turn a value or an array into a string or array of strings
+         * @param x A value or array
+         * @returns A string or array of strings
+         */
+        const stringify = (x) => {
+            if (typeof x === "string" || typeof x[0] === "string")
+                return x;
+            return x.length ? x.map((e) => `${e}`) : `${x}`;
+        };
+        exports.stringify = stringify;
         /**
          * Returns the length of an array
          * @param x An array
@@ -264,8 +282,7 @@ var PLOTSCAPE = (() => {
         // Finds the nearest pretty number for each
         const toPretty = (x, n = 4) => {
             const breaks = prettyBreaks(x, n);
-            let i = x.length;
-            const res = Array(x.length);
+            let [i, res] = [x.length, Array(x.length)];
             while (i--) {
                 const x2 = breaks.map((e) => Math.pow((e - x[i]), 2));
                 res[i] = breaks[x2.indexOf(min(x2))];
@@ -411,8 +428,10 @@ var PLOTSCAPE = (() => {
                 this.clear = () => this.fill(1);
                 this.discardTransient = () => {
                     let i = this.length;
-                    while (i--)
+                    while (i--) {
+                        console.log(i);
                         this[i] = this[i] & ~128;
+                    }
                 };
                 this.merge = (arr) => {
                     let i = this.length;
@@ -612,377 +631,28 @@ var PLOTSCAPE = (() => {
                 super();
                 this.mouseDown = (event) => {
                     this.holding = true;
-                    this.clickCurrent = [event.offsetX, event.offsetY];
-                    this.clickLast = [event.offsetX, event.offsetY];
+                    this.button = event.button;
+                    this.positionCurrent = [event.offsetX, event.offsetY];
+                    this.positionLast = [event.offsetX, event.offsetY];
                     this.publish("mouseDown");
                 };
                 this.mouseUp = (event) => {
                     this.holding = false;
-                    this.clickCurrent = [null, null];
+                    this.button = -1;
+                    this.positionCurrent = [null, null];
                     this.publish("mouseUp");
                 };
                 this.container = container;
+                this.button = -1;
                 this.holding = false;
-                this.clickCurrent = [null, null];
-                this.clickLast = [null, null];
+                this.positionCurrent = [null, null];
+                this.positionLast = [null, null];
                 this.events = ["mousedown", "mouseup"];
                 this.consequences = ["mouseDown", "mouseUp"];
                 this.registerEvents(this.container);
             }
         }
         exports.ClickHandler = ClickHandler;
-    });
-    define("handlers/handlers", ["require", "exports", "handlers/MarkerHandler", "handlers/KeypressHandler", "handlers/DragHandler", "handlers/StateHandler", "handlers/ClickHandler"], function (require, exports, MarkerHandler_js_1, KeypressHandler_js_1, DragHandler_js_1, StateHandler_js_1, ClickHandler_js_1) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        __exportStar(MarkerHandler_js_1, exports);
-        __exportStar(KeypressHandler_js_1, exports);
-        __exportStar(DragHandler_js_1, exports);
-        __exportStar(StateHandler_js_1, exports);
-        __exportStar(ClickHandler_js_1, exports);
-    });
-    define("datastructures", ["require", "exports"], function (require, exports) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.plotTypeArray = exports.highlightMembershipArray = exports.validMembershipArray = exports.baseMembershipArray = exports.Mapping = exports.DataFrame = void 0;
-        class DataFrame {
-            constructor(data) {
-                Object.keys(data).forEach((e) => (this[e] = data[e]));
-            }
-            get _indicator() {
-                return Array(this[Object.keys(this)[0]].length).fill(1);
-            }
-        }
-        exports.DataFrame = DataFrame;
-        class Mapping extends Map {
-            constructor(...mappings) {
-                super([...mappings]);
-                if (!this.has("y"))
-                    this.set("y", "_indicator");
-            }
-        }
-        exports.Mapping = Mapping;
-        const baseMembershipArray = [1, 2, 3, 4];
-        exports.baseMembershipArray = baseMembershipArray;
-        const transientMembershipArray = [129, 130, 131, 132];
-        const validMembershipArray = [
-            ...baseMembershipArray,
-            ...transientMembershipArray,
-            128,
-        ];
-        exports.validMembershipArray = validMembershipArray;
-        const [, ...highlightMembershipArray] = validMembershipArray;
-        exports.highlightMembershipArray = highlightMembershipArray;
-        const plotTypeArray = [
-            "scatter",
-            "bubble",
-            "bar",
-            "histo",
-            "square",
-            "squareheat",
-        ];
-        exports.plotTypeArray = plotTypeArray;
-    });
-    define("scales/Scale", ["require", "exports"], function (require, exports) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.Scale = void 0;
-        class Scale {
-            constructor(length, plot, direction = 1, expand = 0.1) {
-                this.setLength = (length) => {
-                    this.lengthOriginal = length;
-                    this.offsetOriginal = this.direction === -1 ? length : 0;
-                };
-                this.registerData = (data) => {
-                    this.data = data;
-                    return this;
-                };
-                this.pctToUnits = (pct) => {
-                    const { length, offset, direction } = this;
-                    return typeof pct === "number"
-                        ? offset + direction * length * pct
-                        : pct.map((e) => offset + direction * length * e);
-                };
-                this.unitsToPct = (units) => {
-                    const { length } = this;
-                    return typeof units === "number"
-                        ? units / length
-                        : units.map((e) => e / length);
-                };
-                this.dataToPlot = (data) => { };
-                this.plot = plot;
-                this.lengthOriginal = length;
-                this.offsetOriginal = this.direction === -1 ? length : 0;
-                this.direction = direction;
-                this.expand = expand;
-            }
-            get length() {
-                return this.lengthOriginal;
-            }
-            get offset() {
-                return this.offsetOriginal;
-            }
-        }
-        exports.Scale = Scale;
-    });
-    define("scales/ScaleContinuous", ["require", "exports", "scales/Scale"], function (require, exports, Scale_js_1) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.ScaleContinuous = void 0;
-        class ScaleContinuous extends Scale_js_1.Scale {
-            constructor(length, plot, direction = 1, includeZero = false, expand = 0.1) {
-                super(length, plot, direction, expand);
-                this.data = [];
-                this.registerData = (data) => {
-                    this.data = this.includeZero
-                        ? [0, Math.max(...data)]
-                        : [Math.min(...data), Math.max(...data)];
-                    return this;
-                };
-                this.inRange = (x) => {
-                    return x >= this.dataMin && x <= this.dataMax;
-                };
-                this.pctToData = (pct) => {
-                    if (pct === null)
-                        return null;
-                    const { dataMin, range } = this;
-                    if (typeof pct === "number")
-                        return dataMin + pct * range;
-                    return pct.map((e) => {
-                        if (e === null)
-                            return null;
-                        return dataMin + e * range;
-                    });
-                };
-                this.dataToPct = (data) => {
-                    if (data === null)
-                        return null;
-                    const { dataMin, range } = this;
-                    if (typeof data === "number")
-                        return (data - dataMin) / range;
-                    return data.map((e) => {
-                        if (e === null)
-                            return null;
-                        return (e - dataMin) / range;
-                    });
-                };
-                this.dataToUnits = (data) => {
-                    if (data === null)
-                        return null;
-                    const { dataMin, length, offset, direction, range } = this;
-                    if (typeof data === "number")
-                        return offset + (direction * length * (data - dataMin)) / range;
-                    return data.map((e) => {
-                        if (e === null)
-                            return null;
-                        return offset + direction * length * ((e - dataMin) / range);
-                    });
-                };
-                this.unitsToData = (units) => {
-                    if (units === null)
-                        return null;
-                    const { dataMin, length, offset, direction, range } = this;
-                    if (typeof units === "number")
-                        return dataMin + (direction * range * (units - offset)) / length;
-                    return units.map((e) => {
-                        if (e === null)
-                            return null;
-                        return dataMin + direction * range * ((e - offset) / length);
-                    });
-                };
-                this.continuous = true;
-                this.includeZero = includeZero;
-            }
-            get dataMin() {
-                const { data, expand } = this;
-                return this.includeZero
-                    ? 0
-                    : Math.min(...data) - expand * (Math.max(...data) - Math.min(...data));
-            }
-            get dataMax() {
-                const { data, expand } = this;
-                return Math.max(...data) + expand * (Math.max(...data) - Math.min(...data));
-            }
-            get range() {
-                return this.dataMax - this.dataMin;
-            }
-        }
-        exports.ScaleContinuous = ScaleContinuous;
-    });
-    define("scales/ScaleDiscrete", ["require", "exports", "scales/Scale"], function (require, exports, Scale_js_2) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.ScaleDiscrete = void 0;
-        class ScaleDiscrete extends Scale_js_2.Scale {
-            constructor(length, plot, direction = 1, expand = 0.1) {
-                super(length, plot, direction, expand);
-                this.toString = (x) => {
-                    if (typeof x === "string" || typeof x[0] === "string")
-                        return x;
-                    return x.length ? x.map((e) => `${e}`) : `${x}`;
-                };
-                this.registerData = (data) => {
-                    this.data = data;
-                    const arr = Array.from(new Set([...data]));
-                    this.values =
-                        typeof arr[0] === "number"
-                            ? arr.sort((a, b) => a - b)
-                            : arr.sort();
-                    this.positions = Array.from(Array(this.values.length), (e, i) => (i + 1) / (this.values.length + 1));
-                    return this;
-                };
-                this.dataToUnits = (x) => {
-                    if (x == null)
-                        return null;
-                    const { values, length, direction, positions, offset } = this;
-                    const xString = this.toString(x);
-                    const valuesString = this.toString(values);
-                    if (typeof xString === "string") {
-                        return valuesString.indexOf(xString) !== -1
-                            ? offset + direction * length * positions[valuesString.indexOf(xString)]
-                            : null;
-                    }
-                    return xString.map((e) => valuesString.indexOf(e) !== -1
-                        ? offset + direction * length * positions[valuesString.indexOf(e)]
-                        : null);
-                };
-                this.discrete = true;
-                this.values = [];
-            }
-        }
-        exports.ScaleDiscrete = ScaleDiscrete;
-    });
-    define("scales/AreaScaleContinuous", ["require", "exports", "scales/ScaleContinuous"], function (require, exports, ScaleContinuous_js_1) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.AreaScaleContinuous = void 0;
-        class AreaScaleContinuous extends ScaleContinuous_js_1.ScaleContinuous {
-            constructor(length, plot, direction = 1, zero = false) {
-                super(length, plot, direction, zero);
-                this.dataToPlot = (data) => {
-                    const res = this.dataToUnits(data);
-                    return typeof res === "number"
-                        ? Math.sqrt(res)
-                        : res.map((e) => Math.sqrt(e));
-                };
-            }
-            get dataMin() {
-                return 0;
-            }
-        }
-        exports.AreaScaleContinuous = AreaScaleContinuous;
-    });
-    define("scales/LengthScaleContinuous", ["require", "exports", "scales/ScaleContinuous"], function (require, exports, ScaleContinuous_js_2) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.LengthScaleContinuous = void 0;
-        class LengthScaleContinuous extends ScaleContinuous_js_2.ScaleContinuous {
-            constructor(length, plot, direction = 1, zero = false) {
-                super(length, plot, direction, zero);
-                this.dataToPlot = (data) => {
-                    const res = this.dataToUnits(data);
-                    return res;
-                };
-            }
-            get dataMin() {
-                return 0;
-            }
-        }
-        exports.LengthScaleContinuous = LengthScaleContinuous;
-    });
-    define("scales/XYScaleDiscrete", ["require", "exports", "scales/ScaleDiscrete"], function (require, exports, ScaleDiscrete_js_1) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.XYScaleDiscrete = void 0;
-        class XYScaleDiscrete extends ScaleDiscrete_js_1.ScaleDiscrete {
-            constructor(length, plot, direction = 1, expand = 0.1) {
-                super(length, plot, direction, expand);
-                this.dataToPlot = (data) => {
-                    return this.dataToUnits(data);
-                };
-                this.pctToPlot = (pct) => {
-                    return this.pctToUnits(pct);
-                };
-                this.plotToPct = (units) => {
-                    return this.unitsToPct(units);
-                };
-            }
-            get margins() {
-                return {
-                    lower: 4 * this.plot.fontsize,
-                    upper: 2 * this.plot.fontsize,
-                };
-            }
-            get offset() {
-                return this.offsetOriginal + this.direction * this.margins.lower;
-            }
-            get length() {
-                return this.lengthOriginal - this.margins.lower - this.margins.upper;
-            }
-            get plotMin() {
-                return this.pctToUnits(0);
-            }
-            get plotMax() {
-                return this.pctToUnits(1);
-            }
-            get intervalWidth() {
-                const { values, dataToPlot } = this;
-                return Math.abs(dataToPlot(values[0]) - dataToPlot(values[1]));
-            }
-        }
-        exports.XYScaleDiscrete = XYScaleDiscrete;
-    });
-    define("scales/XYScaleContinuous", ["require", "exports", "scales/ScaleContinuous"], function (require, exports, ScaleContinuous_js_3) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.XYScaleContinuous = void 0;
-        class XYScaleContinuous extends ScaleContinuous_js_3.ScaleContinuous {
-            constructor(length, plot, direction = 1, zero = false, expand = 0.1) {
-                super(length, plot, direction, zero, expand);
-                this.dataToPlot = (data) => {
-                    return this.dataToUnits(data);
-                };
-                this.plotToData = (units) => {
-                    return this.unitsToData(units);
-                };
-                this.pctToPlot = (pct) => {
-                    return this.pctToUnits(pct);
-                };
-                this.plotToPct = (units) => {
-                    return this.unitsToPct(units);
-                };
-            }
-            get margins() {
-                return {
-                    lower: 4 * this.plot.fontsize,
-                    upper: 2 * this.plot.fontsize,
-                };
-            }
-            get offset() {
-                return this.offsetOriginal + this.direction * this.margins.lower;
-            }
-            get length() {
-                return this.lengthOriginal - this.margins.lower - this.margins.upper;
-            }
-            get plotMin() {
-                return this.pctToUnits(0);
-            }
-            get plotMax() {
-                return this.pctToUnits(1);
-            }
-        }
-        exports.XYScaleContinuous = XYScaleContinuous;
-    });
-    define("scales/scales", ["require", "exports", "scales/Scale", "scales/ScaleContinuous", "scales/ScaleDiscrete", "scales/AreaScaleContinuous", "scales/LengthScaleContinuous", "scales/XYScaleDiscrete", "scales/XYScaleContinuous"], function (require, exports, Scale_js_3, ScaleContinuous_js_4, ScaleDiscrete_js_2, AreaScaleContinuous_js_1, LengthScaleContinuous_js_1, XYScaleDiscrete_js_1, XYScaleContinuous_js_1) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        __exportStar(Scale_js_3, exports);
-        __exportStar(ScaleContinuous_js_4, exports);
-        __exportStar(ScaleDiscrete_js_2, exports);
-        __exportStar(AreaScaleContinuous_js_1, exports);
-        __exportStar(LengthScaleContinuous_js_1, exports);
-        __exportStar(XYScaleDiscrete_js_1, exports);
-        __exportStar(XYScaleContinuous_js_1, exports);
     });
     define("globalparameters", ["require", "exports"], function (require, exports) {
         "use strict";
@@ -991,7 +661,8 @@ var PLOTSCAPE = (() => {
         exports.globalParameters = {
             plot: {
                 scaleExpandFactor: 0.1,
-                backgroundColour: `#f2efde`,
+                backgroundColour: `#F7F7F2`,
+                marginColour: `#F7F7F2`,
             },
             reps: {
                 colour: [`#cccccc`, `#7fc97f`, `#fdc086`, `#beaed4`, `#386cb0`],
@@ -1046,7 +717,7 @@ var PLOTSCAPE = (() => {
                     context.fillRect(0, 0, this.width, this.height);
                     context.restore();
                 };
-                this.drawBarsV = (x, y, y0, width, pars) => {
+                this.drawBarsV = (x, y, y0, width, pars = this.defaultPars) => {
                     const [xs, ys, y0s, ws] = this.dropMissing(x, y, y0, width);
                     const { colour, strokeColour, strokeWidth, alpha } = pars;
                     const context = this.context;
@@ -1062,7 +733,7 @@ var PLOTSCAPE = (() => {
                     });
                     context.restore();
                 };
-                this.drawPoints = (x, y, radius, pars) => {
+                this.drawPoints = (x, y, radius, pars = this.defaultPars) => {
                     const context = this.context;
                     const { colour, strokeColour, strokeWidth, alpha } = pars;
                     context.save();
@@ -1079,7 +750,7 @@ var PLOTSCAPE = (() => {
                     });
                     context.restore();
                 };
-                this.drawRectsHW = (x, y, h, w, pars) => {
+                this.drawRectsHW = (x, y, h, w, pars = this.defaultPars) => {
                     const context = this.context;
                     const { colour, strokeColour, strokeWidth, alpha } = pars;
                     context.save();
@@ -1092,6 +763,22 @@ var PLOTSCAPE = (() => {
                         if (strokeColour)
                             context.strokeRect(e - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
                     });
+                    context.restore();
+                };
+                this.drawRectsAB = (x0, y0, x1, y1, pars = this.defaultPars) => {
+                    const [x0s, y0s, x1s, y1s] = this.dropMissing(x0, y0, x1, y1);
+                    const context = this.context;
+                    const { colour, strokeColour, strokeWidth, alpha } = pars;
+                    let i = x0.length;
+                    context.save();
+                    context.fillStyle = this.toAlpha(colour, alpha);
+                    context.strokeStyle = strokeColour;
+                    context.lineWidth = strokeWidth;
+                    while (i--) {
+                        const ws = x1s[i] - x0s[i];
+                        const hs = y0s[i] - y1s[i];
+                        context.fillRect(x0s[i], y0s[i], ws, -hs);
+                    }
                     context.restore();
                 };
                 this.drawLine = (x, y, col = "black") => {
@@ -1160,8 +847,8 @@ var PLOTSCAPE = (() => {
                 // No argument: default split, across all memberships
                 this.getSplitOf = (membership) => {
                     const { acrossVec, indices, uniqueIndices, marker } = this;
-                    const res = Array.from(Array(uniqueIndices.length), (e) => []);
                     let i = indices.length;
+                    let res = Array.from(Array(uniqueIndices.length), (e) => []);
                     while (i--) {
                         if (!membership || marker.isOfMembership(i, membership)) {
                             res[indices[i]].push(acrossVec[i]);
@@ -1425,7 +1112,6 @@ var PLOTSCAPE = (() => {
                 this.widthMultiplier = widthMultiplier;
                 this.sizeMultiplier = widthMultiplier;
                 this.sizeLimits = { min: 0.01, max: 1 };
-                this.alphaMultiplier = 1;
             }
             get y0Scalar() {
                 return this.scales.y.plotMin;
@@ -1538,6 +1224,7 @@ var PLOTSCAPE = (() => {
                         context.drawBarsV(x, y1, y0, sizeBase, pars);
                     });
                 };
+                this.sizeLimits = { min: 0.01, max: 1.5 };
             }
             get maxWidth() {
                 const { x, y } = this.scales;
@@ -1564,12 +1251,474 @@ var PLOTSCAPE = (() => {
         __exportStar(Points_js_1, exports);
         __exportStar(Squares_js_1, exports);
     });
+    define("scales/Scale", ["require", "exports"], function (require, exports) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.Scale = void 0;
+        class Scale {
+            constructor(length, plot, direction = 1, expand = { lower: 0.1, upper: 0.1 }) {
+                this.setLength = (length) => {
+                    this.lengthOriginal = length;
+                    this.offsetOriginal = this.direction === -1 ? length : 0;
+                };
+                this.registerData = (data) => {
+                    this.data = data;
+                    return this;
+                };
+                this.pctToUnits = (pct) => {
+                    const { length, offset, direction } = this;
+                    return typeof pct === "number"
+                        ? offset + direction * length * pct
+                        : pct.map((e) => offset + direction * length * e);
+                };
+                this.unitsToPct = (units) => {
+                    const { length } = this;
+                    return typeof units === "number"
+                        ? units / length
+                        : units.map((e) => e / length);
+                };
+                this.dataToPlot = (data) => { };
+                this.plot = plot;
+                this.lengthOriginal = length;
+                this.offsetOriginal = this.direction === -1 ? length : 0;
+                this.direction = direction;
+                this.expand = expand;
+            }
+            get length() {
+                return this.lengthOriginal;
+            }
+            get offset() {
+                return this.offsetOriginal;
+            }
+        }
+        exports.Scale = Scale;
+    });
+    define("scales/ScaleContinuous", ["require", "exports", "scales/Scale", "functions"], function (require, exports, Scale_js_1, funs) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.ScaleContinuous = void 0;
+        class ScaleContinuous extends Scale_js_1.Scale {
+            constructor(length, plot, direction = 1, includeZero = false, expand = { lower: 0.1, upper: 0.1 }) {
+                super(length, plot, direction, expand);
+                this.data = [];
+                this.registerData = (data) => {
+                    this.data = this.includeZero ? [0, ...data] : data;
+                    this.dataMinOriginal = funs.min(data);
+                    this.dataMaxOriginal = funs.max(data);
+                    return this;
+                };
+                this.inRange = (x) => {
+                    return x >= this.dataMin && x <= this.dataMax;
+                };
+                this.pctToData = (pct) => {
+                    if (pct === null)
+                        return null;
+                    const { dataMin, range } = this;
+                    if (typeof pct === "number")
+                        return dataMin + pct * range;
+                    return pct.map((e) => {
+                        if (e === null)
+                            return null;
+                        return dataMin + e * range;
+                    });
+                };
+                this.dataToPct = (data) => {
+                    if (data === null)
+                        return null;
+                    const { dataMin, range } = this;
+                    if (typeof data === "number")
+                        return (data - dataMin) / range;
+                    return data.map((e) => {
+                        if (e === null)
+                            return null;
+                        return (e - dataMin) / range;
+                    });
+                };
+                this.dataToUnits = (data) => {
+                    if (data === null)
+                        return null;
+                    const { dataMin, length, offset, direction, range } = this;
+                    if (typeof data === "number")
+                        return offset + (direction * length * (data - dataMin)) / range;
+                    return data.map((e) => {
+                        if (e === null)
+                            return null;
+                        return offset + direction * length * ((e - dataMin) / range);
+                    });
+                };
+                this.unitsToData = (units) => {
+                    if (units === null)
+                        return null;
+                    const { dataMin, length, offset, direction, range } = this;
+                    if (typeof units === "number")
+                        return dataMin + (direction * range * (units - offset)) / length;
+                    return units.map((e) => {
+                        if (e === null)
+                            return null;
+                        return dataMin + direction * range * ((e - offset) / length);
+                    });
+                };
+                this.continuous = true;
+                this.includeZero = includeZero;
+            }
+            get rangeOriginal() {
+                return this.dataMaxOriginal - this.dataMinOriginal;
+            }
+            get dataMin() {
+                const { includeZero, dataMinOriginal, rangeOriginal, expand } = this;
+                return includeZero ? 0 : dataMinOriginal - expand.lower * rangeOriginal;
+            }
+            get dataMax() {
+                const { dataMaxOriginal, rangeOriginal, expand } = this;
+                return dataMaxOriginal + expand.upper * rangeOriginal;
+            }
+            get range() {
+                return this.dataMax - this.dataMin;
+            }
+        }
+        exports.ScaleContinuous = ScaleContinuous;
+    });
+    define("scales/ScaleDiscrete", ["require", "exports", "scales/Scale", "functions"], function (require, exports, Scale_js_2, funs) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.ScaleDiscrete = void 0;
+        class ScaleDiscrete extends Scale_js_2.Scale {
+            constructor(length, plot, direction = 1, expand = { lower: 0, upper: 0 }) {
+                super(length, plot, direction, expand);
+                this.registerData = (data) => {
+                    this.data = data;
+                    const arr = Array.from(new Set([...data]));
+                    this.values =
+                        typeof arr[0] === "number"
+                            ? arr.sort((a, b) => a - b)
+                            : arr.sort();
+                    this.positionsOriginal = Array.from(Array(this.values.length), (e, i) => (i + 1) / (this.values.length + 1));
+                    return this;
+                };
+                this.dataToUnits = (x) => {
+                    if (x == null)
+                        return null;
+                    const { values, length, direction, positions, offset, expand } = this;
+                    const strX = funs.stringify(x);
+                    const strValues = funs.stringify(values);
+                    const len = length;
+                    if (typeof strX === "string" && strValues.indexOf(strX) !== -1) {
+                        return offset + direction * len * positions[strValues.indexOf(strX)];
+                    }
+                    return strX.map((e) => {
+                        if (strValues.indexOf(e) !== -1) {
+                            return offset + direction * len * positions[strValues.indexOf(e)];
+                        }
+                    });
+                };
+                this.discrete = true;
+                this.values = [];
+            }
+            get range() {
+                return 1 + this.expand.lower + this.expand.upper;
+            }
+            get positions() {
+                const { lower, upper } = this.expand;
+                const shift = upper - lower + (0.5 - 0.5 / this.range);
+                return this.positionsOriginal.map((e) => e / this.range + shift);
+            }
+        }
+        exports.ScaleDiscrete = ScaleDiscrete;
+    });
+    define("scales/AreaScaleContinuous", ["require", "exports", "scales/ScaleContinuous"], function (require, exports, ScaleContinuous_js_1) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.AreaScaleContinuous = void 0;
+        class AreaScaleContinuous extends ScaleContinuous_js_1.ScaleContinuous {
+            constructor(length, plot, direction = 1, zero = false) {
+                super(length, plot, direction, zero);
+                this.dataToPlot = (data) => {
+                    const res = this.dataToUnits(data);
+                    return typeof res === "number"
+                        ? Math.sqrt(res)
+                        : res.map((e) => Math.sqrt(e));
+                };
+            }
+            get dataMin() {
+                return 0;
+            }
+        }
+        exports.AreaScaleContinuous = AreaScaleContinuous;
+    });
+    define("scales/LengthScaleContinuous", ["require", "exports", "scales/ScaleContinuous"], function (require, exports, ScaleContinuous_js_2) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.LengthScaleContinuous = void 0;
+        class LengthScaleContinuous extends ScaleContinuous_js_2.ScaleContinuous {
+            constructor(length, plot, direction = 1, zero = false) {
+                super(length, plot, direction, zero);
+                this.dataToPlot = (data) => {
+                    const res = this.dataToUnits(data);
+                    return res;
+                };
+            }
+            get dataMin() {
+                return 0;
+            }
+        }
+        exports.LengthScaleContinuous = LengthScaleContinuous;
+    });
+    define("scales/XYScaleDiscrete", ["require", "exports", "scales/ScaleDiscrete"], function (require, exports, ScaleDiscrete_js_1) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.XYScaleDiscrete = void 0;
+        class XYScaleDiscrete extends ScaleDiscrete_js_1.ScaleDiscrete {
+            constructor(length, plot, direction = 1, expand = { lower: 0, upper: 0 }) {
+                super(length, plot, direction, expand);
+                this.dataToPlot = (data) => {
+                    return this.dataToUnits(data);
+                };
+                this.pctToPlot = (pct) => {
+                    return this.pctToUnits(pct);
+                };
+                this.plotToPct = (units) => {
+                    return this.unitsToPct(units);
+                };
+            }
+            get margins() {
+                return {
+                    lower: 4 * this.plot.fontsize,
+                    upper: 2 * this.plot.fontsize,
+                };
+            }
+            get offset() {
+                return this.offsetOriginal + this.direction * this.margins.lower;
+            }
+            get length() {
+                return this.lengthOriginal - this.margins.lower - this.margins.upper;
+            }
+            get plotMin() {
+                return this.pctToUnits(0);
+            }
+            get plotMax() {
+                return this.pctToUnits(1);
+            }
+            get intervalWidth() {
+                const { values, dataToPlot } = this;
+                return Math.abs(dataToPlot(values[0]) - dataToPlot(values[1]));
+            }
+        }
+        exports.XYScaleDiscrete = XYScaleDiscrete;
+    });
+    define("scales/XYScaleContinuous", ["require", "exports", "scales/ScaleContinuous"], function (require, exports, ScaleContinuous_js_3) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.XYScaleContinuous = void 0;
+        class XYScaleContinuous extends ScaleContinuous_js_3.ScaleContinuous {
+            constructor(length, plot, direction = 1, zero = false, expand = { lower: 0.1, upper: 0.1 }) {
+                super(length, plot, direction, zero, expand);
+                this.dataToPlot = (data) => {
+                    return this.dataToUnits(data);
+                };
+                this.plotToData = (units) => {
+                    return this.unitsToData(units);
+                };
+                this.pctToPlot = (pct) => {
+                    return this.pctToUnits(pct);
+                };
+                this.plotToPct = (units) => {
+                    return this.unitsToPct(units);
+                };
+            }
+            get margins() {
+                return {
+                    lower: 4 * this.plot.fontsize,
+                    upper: 2 * this.plot.fontsize,
+                };
+            }
+            get offset() {
+                return this.offsetOriginal + this.direction * this.margins.lower;
+            }
+            get length() {
+                return this.lengthOriginal - this.margins.lower - this.margins.upper;
+            }
+            get plotMin() {
+                return this.pctToUnits(0);
+            }
+            get plotMax() {
+                return this.pctToUnits(1);
+            }
+        }
+        exports.XYScaleContinuous = XYScaleContinuous;
+    });
+    define("scales/ScaleContinuous2", ["require", "exports", "datastructures"], function (require, exports, dtstr) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.ScaleContinuous2 = void 0;
+        class ScaleContinuous2 {
+            constructor() {
+                this.setLimits = (min, max) => {
+                    this.min = min;
+                    this.max = max;
+                    return this;
+                };
+                this.unitsToPct = (units) => {
+                    if (units === null)
+                        return null;
+                    if (dtstr.isArray(units)) {
+                        let [i, res] = [units.length, new Float32Array(units.length)];
+                        while (i--)
+                            res[i] = (units[i] - this.min) / this.range;
+                        return res;
+                    }
+                    return (units - this.min) / this.range;
+                };
+                this.pctToUnits = (pct) => {
+                    if (pct === null)
+                        return null;
+                    if (dtstr.isArray(pct)) {
+                        let [i, res] = [pct.length, new Float32Array(pct.length)];
+                        while (i--)
+                            res[i] = this.min + pct[i] * this.range;
+                        return res;
+                    }
+                    return this.min + pct * this.range;
+                };
+            }
+            get range() {
+                return this.max - this.min;
+            }
+        }
+        exports.ScaleContinuous2 = ScaleContinuous2;
+    });
+    define("scales/ScaleDiscrete2", ["require", "exports", "datastructures", "functions"], function (require, exports, dtstr, funs) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.ScaleDiscrete2 = void 0;
+        class ScaleDiscrete2 {
+            constructor() {
+                this.setValues = (values, sorted = false) => {
+                    this.values = sorted ? funs.unique(values) : funs.sort(funs.unique(values));
+                    const n = this.values.length;
+                    this.positions = [...Array(n).keys()].map((i) => (i + 1) / (n + 1));
+                    this.positionValueMap = new Map();
+                    this.values.forEach((e, i) => this.positionValueMap.set(e, this.positions[i]));
+                    return this;
+                };
+                this.unitsToPct = (units) => {
+                    if (units === null)
+                        return null;
+                    if (dtstr.isArray(units)) {
+                        let [i, res] = [units.length, new Float32Array(units.length)];
+                        while (i--)
+                            res[i] = this.positionValueMap.get(units[i]);
+                        return res;
+                    }
+                    return this.positionValueMap.get(units);
+                };
+            }
+        }
+        exports.ScaleDiscrete2 = ScaleDiscrete2;
+    });
+    define("scales/PlotScaleContinuous2", ["require", "exports", "functions", "scales/ScaleContinuous2"], function (require, exports, funs, ScaleContinuous2_js_1) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.PlotScaleContinuous2 = void 0;
+        class PlotScaleContinuous2 {
+            constructor(zero) {
+                this.expand = (min, max) => {
+                    this.expandScale.min -= min;
+                    this.expandScale.max += max;
+                };
+                this.setPlotLimits = (min, max) => {
+                    this.plotScale.setLimits(min, max);
+                    return this;
+                };
+                this.registerData = (data) => {
+                    this.dataScale.setLimits(this.zero ? 0 : funs.min(data), funs.max(data));
+                    return this;
+                };
+                this.pctToPlot = (pct) => {
+                    return this.plotScale.pctToUnits(pct);
+                };
+                this.dataToPlot = (data) => {
+                    const { dataScale, expandScale, plotScale } = this;
+                    return plotScale.pctToUnits(expandScale.unitsToPct(dataScale.unitsToPct(data)));
+                };
+                this.dataScale = new ScaleContinuous2_js_1.ScaleContinuous2();
+                this.expandScale = new ScaleContinuous2_js_1.ScaleContinuous2().setLimits(0, 1);
+                this.plotScale = new ScaleContinuous2_js_1.ScaleContinuous2();
+                this.zero = zero;
+            }
+            get plotMin() {
+                return this.pctToPlot(0);
+            }
+            get plotMax() {
+                return this.pctToPlot(1);
+            }
+        }
+        exports.PlotScaleContinuous2 = PlotScaleContinuous2;
+    });
+    define("scales/PlotScaleDiscrete2", ["require", "exports", "scales/ScaleContinuous2", "scales/ScaleDiscrete2"], function (require, exports, ScaleContinuous2_js_2, ScaleDiscrete2_js_1) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.PlotScaleDiscrete2 = void 0;
+        class PlotScaleDiscrete2 {
+            constructor(zero = false) {
+                this.expand = (min, max) => {
+                    this.expandScale.min -= min;
+                    this.expandScale.max += max;
+                };
+                this.setPlotLimits = (min, max) => {
+                    this.plotScale.setLimits(min, max);
+                    return this;
+                };
+                this.registerData = (data) => {
+                    this.dataScale.setValues(data);
+                    return this;
+                };
+                this.pctToPlot = (pct) => {
+                    return this.plotScale.pctToUnits(pct);
+                };
+                this.dataToPlot = (data) => {
+                    const { dataScale, expandScale, plotScale } = this;
+                    return plotScale.pctToUnits(expandScale.unitsToPct(dataScale.unitsToPct(data)));
+                };
+                this.dataScale = new ScaleDiscrete2_js_1.ScaleDiscrete2();
+                this.expandScale = new ScaleContinuous2_js_2.ScaleContinuous2().setLimits(0, 1);
+                this.plotScale = new ScaleContinuous2_js_2.ScaleContinuous2();
+                this.zero = zero;
+            }
+            get plotMin() {
+                return this.pctToPlot(0);
+            }
+            get plotMax() {
+                return this.pctToPlot(1);
+            }
+            get breakWidth() {
+                let vals = this.dataScale.values.filter((e, i) => i < 2);
+                vals = vals.map((e) => this.dataToPlot(e));
+                return Math.abs(vals[1] - vals[0]);
+            }
+        }
+        exports.PlotScaleDiscrete2 = PlotScaleDiscrete2;
+    });
+    define("scales/scales", ["require", "exports", "scales/Scale", "scales/ScaleContinuous", "scales/ScaleDiscrete", "scales/AreaScaleContinuous", "scales/LengthScaleContinuous", "scales/XYScaleDiscrete", "scales/XYScaleContinuous", "scales/ScaleContinuous2", "scales/ScaleDiscrete2", "scales/PlotScaleContinuous2", "scales/PlotScaleDiscrete2"], function (require, exports, Scale_js_3, ScaleContinuous_js_4, ScaleDiscrete_js_2, AreaScaleContinuous_js_1, LengthScaleContinuous_js_1, XYScaleDiscrete_js_1, XYScaleContinuous_js_1, ScaleContinuous2_js_3, ScaleDiscrete2_js_2, PlotScaleContinuous2_js_1, PlotScaleDiscrete2_js_1) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        __exportStar(Scale_js_3, exports);
+        __exportStar(ScaleContinuous_js_4, exports);
+        __exportStar(ScaleDiscrete_js_2, exports);
+        __exportStar(AreaScaleContinuous_js_1, exports);
+        __exportStar(LengthScaleContinuous_js_1, exports);
+        __exportStar(XYScaleDiscrete_js_1, exports);
+        __exportStar(XYScaleContinuous_js_1, exports);
+        __exportStar(ScaleContinuous2_js_3, exports);
+        __exportStar(ScaleDiscrete2_js_2, exports);
+        __exportStar(PlotScaleContinuous2_js_1, exports);
+        __exportStar(PlotScaleDiscrete2_js_1, exports);
+    });
     define("auxiliaries/Auxiliary", ["require", "exports"], function (require, exports) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.Auxiliary = void 0;
         class Auxiliary {
-            constructor() {
+            constructor(plot) {
                 this.registerScales = (scales) => {
                     this.scales = scales;
                     return this;
@@ -1577,6 +1726,7 @@ var PLOTSCAPE = (() => {
                 this.draw = (context, ...args) => { };
                 this.drawBase = (context, ...args) => { };
                 this.drawUser = (context, handler, ...args) => { };
+                this.plot = plot;
             }
         }
         exports.Auxiliary = Auxiliary;
@@ -1596,10 +1746,7 @@ var PLOTSCAPE = (() => {
                     context.drawLine([x0, x1], [y0, y0]);
                     context.drawLine([x0, x0], [y0, y1]);
                 };
-                this.drawBase = (context) => {
-                    this.draw(context);
-                };
-                this.drawHighlight = (context) => {
+                this.drawOverlay = (context) => {
                     this.draw(context);
                 };
             }
@@ -1611,18 +1758,21 @@ var PLOTSCAPE = (() => {
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.AxisText = void 0;
         class AxisText extends Auxiliary_js_2.Auxiliary {
-            constructor(along, plot, nbreaks) {
-                super();
+            constructor(plot, along, nbreaks) {
+                super(plot);
                 this.getLabelMetrics = (context) => {
                     return this.labels.map((label) => context.context.measureText(label));
                 };
                 this.draw = (context) => {
-                    const { scales, along, other, breaks, plot } = this;
-                    const size = plot.fontsize;
-                    const intercepts = Array.from(Array(breaks.length), (e) => scales[other].plotMin + ((along === "x" ? 1 : -1) * size) / 2);
+                    const { along, other, breaks, sizeHandler } = this;
+                    const size = sizeHandler.fontsize;
+                    const coord0 = sizeHandler.innerCoords[`${other}0`];
+                    const min = coord0 + ((along === "x" ? 1 : -1) * size) / 2;
+                    const intercepts = Array(breaks.length).fill(min);
                     const coords = { x: null, y: null };
                     coords[along] = breaks;
                     coords[other] = intercepts;
+                    context.context.save();
                     if (along === "x") {
                         context.context.textBaseline = "top";
                         context.context.textAlign = "center";
@@ -1632,13 +1782,15 @@ var PLOTSCAPE = (() => {
                         context.context.textAlign = "right";
                     }
                     context.drawText(coords.x, coords.y, this.labels, size);
+                    context.context.restore();
                 };
-                this.drawBase = (context) => {
+                this.drawOverlay = (context) => {
                     this.draw(context);
                 };
+                this.plot = plot;
+                this.sizeHandler = plot.handlers.size;
                 this.along = along;
                 this.other = along === "x" ? "y" : "x";
-                this.plot = plot;
                 this.nbreaks = nbreaks !== null && nbreaks !== void 0 ? nbreaks : 4;
             }
             get dataBreaks() {
@@ -1661,15 +1813,15 @@ var PLOTSCAPE = (() => {
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.AxisTitle = void 0;
         class AxisTitle extends Auxiliary_js_3.Auxiliary {
-            constructor(along, label, plot) {
-                super();
+            constructor(plot, along, label) {
+                super(plot);
                 this.getLabelMetrics = (context) => {
                     return context.context.measureText(this.label);
                 };
                 this.draw = (context) => {
                     if (this.label === "_indicator")
                         return;
-                    const { scales, along, other, plot } = this;
+                    const { sizeHandler, scales, along, other, plot } = this;
                     const size = Math.floor(plot.fontsize * 1.5);
                     const coords = { x: null, y: null };
                     coords[along] = scales[along].pctToPlot(0.5);
@@ -1681,13 +1833,14 @@ var PLOTSCAPE = (() => {
                     context.context.textBaseline = "middle";
                     context.drawText([coords.x], [coords.y], [this.label], size, rot);
                 };
-                this.drawBase = (context) => {
+                this.drawOverlay = (context) => {
                     this.draw(context);
                 };
+                this.plot = plot;
+                this.sizeHandler = plot.handlers.size;
                 this.along = along;
                 this.other = along === "x" ? "y" : "x";
                 this.label = label;
-                this.plot = plot;
             }
         }
         exports.AxisTitle = AxisTitle;
@@ -1697,8 +1850,8 @@ var PLOTSCAPE = (() => {
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.HighlightRects = void 0;
         class HighlightRects extends Auxiliary_js_4.Auxiliary {
-            constructor(handlers) {
-                super();
+            constructor(plot, handlers) {
+                super(plot);
                 this.updateCurrentOrigin = (point) => {
                     this.current[0] = point;
                 };
@@ -1771,6 +1924,7 @@ var PLOTSCAPE = (() => {
         __exportStar(AxisTitle_js_1, exports);
         __exportStar(HighlightRects_js_1, exports);
     });
+    //export * from "./MaskingRects.js";
     define("plot/GraphicStack", ["require", "exports", "plot/GraphicLayer"], function (require, exports, GraphicLayer_js_1) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
@@ -1778,14 +1932,19 @@ var PLOTSCAPE = (() => {
         class GraphicStack {
             constructor(element) {
                 this.initialize = () => {
-                    const graphicLayers = ["graphicBase", "graphicUser", "graphicHighlight"];
+                    const graphicLayers = [
+                        "layerBase",
+                        "layerUser",
+                        "layerHighlight",
+                        "layerOverlay",
+                    ];
                     this.sceneDiv.appendChild(this.containerDiv);
                     this.containerDiv.classList.add("plotscape-container");
                     graphicLayers.forEach((e) => {
                         this[e] = new GraphicLayer_js_1.GraphicLayer(this.containerDiv);
                         this.containerDiv.appendChild(this[e].canvas);
                     });
-                    this.graphicBase.drawBackground();
+                    this.layerBase.drawBackground();
                 };
                 this.sceneDiv = element;
                 this.containerDiv = document.createElement("div");
@@ -1804,26 +1963,26 @@ var PLOTSCAPE = (() => {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.Plot = void 0;
+        const layers = ["layerBase", "layerUser", "layerHighlight", "layerOverlay"];
         class Plot extends GraphicStack_js_1.GraphicStack {
             constructor(plotConfig) {
                 const { id, element, mapping, globals } = plotConfig;
                 super(element);
                 this.resize = () => {
-                    const graphicLayers = ["graphicBase", "graphicUser", "graphicHighlight"];
-                    this.scales.x.setLength(this.width);
-                    this.scales.y.setLength(this.height);
-                    graphicLayers.forEach((e) => this[e].resize());
+                    const { handlers, scales } = this;
+                    handlers.size.resize();
+                    scales.x.setLength(handlers.size.width);
+                    scales.y.setLength(handlers.size.height);
+                    layers.forEach((e) => this[e].resize());
                 };
                 this.activate = () => {
                     this.handlers.state.deactivateAll();
                     this.handlers.state.activate(this.id);
                 };
-                // Gets all unique values of a mapping [string], across all wranglers
                 this.getUnique = (mapping) => {
                     const arr = Object.keys(this.wranglers).map((name) => { var _a; return (_a = this.wranglers[name][mapping]) === null || _a === void 0 ? void 0 : _a.extract(); });
                     return Array.from(new Set(arr.flat()));
                 };
-                // Given an array of selection points, checks each representation
                 this.inSelection = (selPoints) => {
                     const allPoints = Object.keys(this.representations).map((e) => {
                         var _a, _b;
@@ -1874,19 +2033,13 @@ var PLOTSCAPE = (() => {
                 };
                 this.keyReleased = () => { };
                 this.mouseDownAnyPlot = (event) => {
-                    var _a;
-                    event.cancelBubble = true;
-                    (_a = event.stopPropagation) === null || _a === void 0 ? void 0 : _a.call(event);
                     if (this.handlers.state.none) {
                         this.auxiliaries.highlightrects.clear();
                         this.drawUser();
                     }
                 };
                 this.mouseDownThisPlot = (event) => {
-                    var _a;
                     const { marker, click, state } = this.handlers;
-                    event.cancelBubble = true;
-                    (_a = event.stopPropagation) === null || _a === void 0 ? void 0 : _a.call(event);
                     marker.mergeCurrent(state.membership === 128);
                     if (state.none) {
                         marker.clearCurrent();
@@ -1895,7 +2048,7 @@ var PLOTSCAPE = (() => {
                     }
                     state.deactivateAll();
                     this.activate();
-                    marker.updateCurrent(this.inClickPosition(click.clickLast), state.membership);
+                    marker.updateCurrent(this.inClickPosition(click.positionLast), state.membership);
                 };
                 this.doubleClick = () => {
                     const { marker, state } = this.handlers;
@@ -1908,10 +2061,7 @@ var PLOTSCAPE = (() => {
                 };
                 this.draw = (context, ...args) => {
                     const { representations, auxiliaries } = this;
-                    const [what, where] = [
-                        "draw" + funs.capitalize(context),
-                        "graphic" + funs.capitalize(context),
-                    ];
+                    const [what, where] = ["draw", "layer"].map((e) => e + funs.capitalize(context));
                     if (context !== "user")
                         this[where].drawClear();
                     if (context === "base")
@@ -1925,13 +2075,15 @@ var PLOTSCAPE = (() => {
                 this.drawBase = () => this.draw("base");
                 this.drawHighlight = () => this.draw("highlight");
                 this.drawUser = () => this.draw("user");
+                this.drawOverlay = () => this.draw("overlay");
                 this.drawRedraw = () => {
                     this.drawBase();
-                    this.drawHighlight();
                     this.drawUser();
+                    this.drawHighlight();
+                    this.drawOverlay();
                 };
                 this.initialize = () => {
-                    const { representations, auxiliaries, handlers, scales, mouseDownThisPlot: mouseDownHere, mouseDownAnyPlot: mouseDownAnywhere, doubleClick, drawBase, containerDiv, sceneDiv, } = this;
+                    const { representations, auxiliaries, handlers, scales, mouseDownThisPlot, mouseDownAnyPlot, doubleClick, containerDiv, sceneDiv, } = this;
                     this.handlers.drag.state = this.handlers.state;
                     Object.keys(scales).forEach((e) => {
                         var _a, _b;
@@ -1940,10 +2092,11 @@ var PLOTSCAPE = (() => {
                     const repsAndAuxs = Object.assign(Object.assign({}, representations), auxiliaries);
                     Object.keys(repsAndAuxs).forEach((e) => { var _a, _b; return (_b = (_a = repsAndAuxs[e]).registerScales) === null || _b === void 0 ? void 0 : _b.call(_a, scales); });
                     sceneDiv.addEventListener("dblclick", doubleClick);
-                    sceneDiv.addEventListener("mousedown", mouseDownAnywhere);
-                    containerDiv.addEventListener("mousedown", mouseDownHere);
+                    sceneDiv.addEventListener("mousedown", mouseDownAnyPlot);
+                    containerDiv.addEventListener("mousedown", mouseDownThisPlot);
                     Object.keys(handlers).forEach((e) => handlers[e].subscribe(this));
-                    drawBase();
+                    this.drawBase();
+                    this.drawOverlay();
                 };
                 this.id = id;
                 this.representations = {};
@@ -1953,26 +2106,135 @@ var PLOTSCAPE = (() => {
                     marker: globals.marker,
                     keypress: globals.keypress,
                     state: globals.state,
+                    size: new hndl.SizeHandler(this),
                     drag: new hndl.DragHandler(this.containerDiv),
                     click: new hndl.ClickHandler(this.containerDiv),
                 };
                 this.auxiliaries = {
-                    axisbox: new auxs.AxisBox(),
-                    axistextx: new auxs.AxisText("x", this),
-                    axistexy: new auxs.AxisText("y", this),
-                    axistitlex: new auxs.AxisTitle("x", mapping.get("x"), this),
-                    axistitley: new auxs.AxisTitle("y", mapping.get("y"), this),
-                    highlightrects: new auxs.HighlightRects(this.handlers),
+                    axisbox: new auxs.AxisBox(this),
+                    axistextx: new auxs.AxisText(this, "x"),
+                    axistexy: new auxs.AxisText(this, "y"),
+                    axistitlex: new auxs.AxisTitle(this, "x", mapping.get("x")),
+                    axistitley: new auxs.AxisTitle(this, "y", mapping.get("y")),
+                    highlightrects: new auxs.HighlightRects(this, this.handlers),
                 };
             }
             get active() {
                 return this.handlers.state.isActive(this.id);
+            }
+            get width() {
+                return parseInt(getComputedStyle(this.containerDiv).width, 10);
+            }
+            get height() {
+                return parseInt(getComputedStyle(this.containerDiv).height, 10);
             }
             get fontsize() {
                 return Math.floor(Math.min(this.width, this.height) * 0.05);
             }
         }
         exports.Plot = Plot;
+    });
+    define("handlers/SizeHandler", ["require", "exports", "handlers/Handler"], function (require, exports, Handler_js_6) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.SizeHandler = void 0;
+        class SizeHandler extends Handler_js_6.Handler {
+            constructor(plot) {
+                super();
+                this.resize = () => {
+                    this.width = this.plot.width;
+                    this.height = this.plot.height;
+                };
+                this.pctAlong = (along, percent) => {
+                    return along === "x" ? this.width * percent : this.height * (1 - percent);
+                };
+                this.plot = plot;
+                this.width = plot.width;
+                this.height = plot.height;
+            }
+            get fontsize() {
+                return Math.floor(Math.min(this.width, this.height) * 0.05);
+            }
+            get margins() {
+                return {
+                    bottom: 4 * this.fontsize,
+                    left: 4 * this.fontsize,
+                    top: 2 * this.fontsize,
+                    right: 2 * this.fontsize,
+                };
+            }
+            get innerWidth() {
+                return this.width - this.margins.left - this.margins.right;
+            }
+            get innerHeight() {
+                return this.height - this.margins.bottom - this.margins.top;
+            }
+            get innerCoords() {
+                return {
+                    x0: this.margins.left,
+                    x1: this.width - this.margins.right,
+                    y0: this.height - this.margins.bottom,
+                    y1: this.height - this.margins.bottom - this.innerHeight,
+                };
+            }
+        }
+        exports.SizeHandler = SizeHandler;
+    });
+    define("handlers/handlers", ["require", "exports", "handlers/MarkerHandler", "handlers/KeypressHandler", "handlers/DragHandler", "handlers/StateHandler", "handlers/ClickHandler", "handlers/SizeHandler"], function (require, exports, MarkerHandler_js_1, KeypressHandler_js_1, DragHandler_js_1, StateHandler_js_1, ClickHandler_js_1, SizeHandler_js_1) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        __exportStar(MarkerHandler_js_1, exports);
+        __exportStar(KeypressHandler_js_1, exports);
+        __exportStar(DragHandler_js_1, exports);
+        __exportStar(StateHandler_js_1, exports);
+        __exportStar(ClickHandler_js_1, exports);
+        __exportStar(SizeHandler_js_1, exports);
+    });
+    define("datastructures", ["require", "exports"], function (require, exports) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.plotTypeArray = exports.highlightMembershipArray = exports.validMembershipArray = exports.baseMembershipArray = exports.Mapping = exports.DataFrame = exports.isArray = void 0;
+        const isArray = (x) => {
+            return Array.isArray(x) || ArrayBuffer.isView(x);
+        };
+        exports.isArray = isArray;
+        class DataFrame {
+            constructor(data) {
+                Object.keys(data).forEach((e) => (this[e] = data[e]));
+            }
+            get _indicator() {
+                return Array(this[Object.keys(this)[0]].length).fill(1);
+            }
+        }
+        exports.DataFrame = DataFrame;
+        class Mapping extends Map {
+            constructor(...mappings) {
+                super([...mappings]);
+                if (!this.has("y"))
+                    this.set("y", "_indicator");
+            }
+        }
+        exports.Mapping = Mapping;
+        const baseMembershipArray = [1, 2, 3, 4];
+        exports.baseMembershipArray = baseMembershipArray;
+        const transientMembershipArray = [129, 130, 131, 132];
+        const validMembershipArray = [
+            ...baseMembershipArray,
+            ...transientMembershipArray,
+            128,
+        ];
+        exports.validMembershipArray = validMembershipArray;
+        const [, ...highlightMembershipArray] = validMembershipArray;
+        exports.highlightMembershipArray = highlightMembershipArray;
+        const plotTypeArray = [
+            "scatter",
+            "bubble",
+            "bar",
+            "histo",
+            "square",
+            "squareheat",
+        ];
+        exports.plotTypeArray = plotTypeArray;
     });
     define("plot/ScatterPlot", ["require", "exports", "scales/scales", "representations/representations", "wrangler/Wrangler", "plot/Plot"], function (require, exports, scls, reps, Wrangler_js_1, Plot_js_1) {
         "use strict";
@@ -2106,7 +2368,7 @@ var PLOTSCAPE = (() => {
                 this.scales = {
                     x: new scls.XYScaleDiscrete(this.width, this),
                     y: new scls.XYScaleDiscrete(this.height, this, -1),
-                    size: new scls.LengthScaleContinuous(1, this),
+                    size: new scls.AreaScaleContinuous(1, this),
                 };
                 this.representations = {
                     squares: new reps.Squares(this.wranglers.wrangler1),
@@ -2138,7 +2400,7 @@ var PLOTSCAPE = (() => {
                 this.scales = {
                     x: new scls.XYScaleContinuous(this.width, this),
                     y: new scls.XYScaleContinuous(this.height, this, -1),
-                    size: new scls.LengthScaleContinuous(1, this),
+                    size: new scls.AreaScaleContinuous(1, this),
                 };
                 this.representations = {
                     squares: new reps.Squares(this.wranglers.wrangler1),

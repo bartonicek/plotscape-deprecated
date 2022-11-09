@@ -2,7 +2,12 @@ import { Plot } from "../main.js";
 import { ScaleDiscrete } from "./ScaleDiscrete.js";
 
 export class XYScaleDiscrete extends ScaleDiscrete {
-  constructor(length: number, plot: Plot, direction = 1, expand = 0.1) {
+  constructor(
+    length: number,
+    plot: Plot,
+    direction = 1,
+    expand = { lower: 0, upper: 0 }
+  ) {
     super(length, plot, direction, expand);
   }
 
@@ -22,11 +27,11 @@ export class XYScaleDiscrete extends ScaleDiscrete {
   }
 
   get plotMin() {
-    return this.pctToUnits(0);
+    return this.pctToUnits(0) as number;
   }
 
   get plotMax() {
-    return this.pctToUnits(1);
+    return this.pctToUnits(1) as number;
   }
 
   get intervalWidth() {

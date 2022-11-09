@@ -103,28 +103,10 @@ const scene = new PLOTSCAPE.Scene(div1, data)
   .addPlotWrapper("histo", new PLOTSCAPE.Mapping(["x", "disp"]))
   .addPlotWrapper("square", new PLOTSCAPE.Mapping(["x", "gear"], ["y", "am"]));
 
-// const ctx = scene.plots.scatter1.graphicBase.context;
-// const pat1 = PLOTSCAPE.createStripePattern("red", 10);
-// ctx.fillStyle = pat1;
-// ctx.fillRect(20, 20, 20, 40);
+const scale1 = new PLOTSCAPE.PlotScaleDiscrete2();
+const arr1 = [1, 2, 3, 4, 5];
+scale1.setPlotLimits(0, 500).registerData(arr1);
 
-// class Something {
-//   constructor() {}
-//   log1 = () => console.log("Something");
-//   log2 = () => console.log("Something2");
-// }
-
-// const a = new Something();
-
-// class OtherThing {
-//   constructor() {
-//     this.callBacks = [];
-//   }
-
-//   registerCallbacks = (something) => {
-//     console.log(Object.keys(something));
-//   };
-// }
-
-// const b = new OtherThing();
-// b.registerCallbacks(a);
+console.log(scale1.dataToPlot(arr1[0]));
+scale1.expand(0.1, 0.1);
+console.log(scale1.dataToPlot(arr1[0]));

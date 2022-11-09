@@ -8,6 +8,7 @@ export class GraphicLayer {
   containerDiv: HTMLDivElement;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
+  defaultPars: SingleValuedRepPars;
 
   constructor(containerDiv: HTMLDivElement) {
     this.containerDiv = containerDiv;
@@ -74,7 +75,7 @@ export class GraphicLayer {
     y: number[],
     y0: number[],
     width: number[],
-    pars: SingleValuedRepPars
+    pars = this.defaultPars
   ) => {
     const [xs, ys, y0s, ws] = this.dropMissing(x, y, y0, width);
     const { colour, strokeColour, strokeWidth, alpha } = pars;
@@ -95,7 +96,7 @@ export class GraphicLayer {
     x: number[],
     y: number[],
     radius: number[],
-    pars: SingleValuedRepPars
+    pars = this.defaultPars
   ) => {
     const context = this.context;
     const { colour, strokeColour, strokeWidth, alpha } = pars;
@@ -117,7 +118,7 @@ export class GraphicLayer {
     y: number[],
     h: number[],
     w: number[],
-    pars: SingleValuedRepPars
+    pars = this.defaultPars
   ) => {
     const context = this.context;
     const { colour, strokeColour, strokeWidth, alpha } = pars;
@@ -130,6 +131,32 @@ export class GraphicLayer {
       if (strokeColour)
         context.strokeRect(e - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
     });
+    context.restore();
+  };
+
+  drawRectsAB = (
+    x0: number[],
+    y0: number[],
+    x1: number[],
+    y1: number[],
+    pars = this.defaultPars
+  ) => {
+    const [x0s, y0s, x1s, y1s] = this.dropMissing(x0, y0, x1, y1);
+    const context = this.context;
+    const { colour, strokeColour, strokeWidth, alpha } = pars;
+
+    let i = x0.length;
+
+    context.save();
+    context.fillStyle = this.toAlpha(colour, alpha);
+    context.strokeStyle = strokeColour;
+    context.lineWidth = strokeWidth;
+
+    while (i--) {
+      const ws = x1s[i] - x0s[i];
+      const hs = y0s[i] - y1s[i];
+      context.fillRect(x0s[i], y0s[i], ws, -hs);
+    }
     context.restore();
   };
 

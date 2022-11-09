@@ -89,11 +89,4 @@ export class StateHandler extends Handler {
   isActive = (id: string) => {
     return this.plotsActive[this.plotIds.indexOf(id)];
   };
-
-  // inState = (state: typeof this.states[number]) => {
-  //   const { keypressHandler, states, keys } = this;
-  //   if (state === "none" && !keypressHandler.currentlyPressed.some((e) => e))
-  //     return true;
-  //   return keypressHandler.isPressed(keys[states.indexOf(state)]);
-  // };
 }

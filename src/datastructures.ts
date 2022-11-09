@@ -1,11 +1,32 @@
 import * as hndl from "handlers/handlers.js";
 
+type TypedArray =
+  | Int8Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array;
+
+const isArray = <Type>(
+  x: Type | Type[] | TypedArray
+): x is Array<Type> | TypedArray => {
+  return Array.isArray(x) || ArrayBuffer.isView(x);
+};
+
 type MethodsOf<Type> = Pick<
   Type,
   {
     [key in keyof Type]: Type[key] extends () => void ? key : never;
   }[keyof Type]
 >;
+
+// Generic vector type has to be dirty otherwise methods like .map()
+// and .filter() don't work
+type VectorGeneric = (number | string | boolean)[];
 
 class DataFrame {
   [key: string]: VectorGeneric;
@@ -16,10 +37,6 @@ class DataFrame {
     return Array(this[Object.keys(this)[0]].length).fill(1);
   }
 }
-
-// Generic vector type has to be dirty otherwise methods like .map()
-// and .filter() don't work
-type VectorGeneric = (number | string | boolean)[];
 
 type ValidMappings = "x" | "y" | "size" | "col" | "shape" | "_indicator";
 class Mapping extends Map<ValidMappings, string> {
@@ -67,6 +84,7 @@ type Globals = {
 };
 
 export {
+  isArray,
   MethodsOf,
   DataFrame,
   VectorGeneric,

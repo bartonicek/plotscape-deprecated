@@ -60,7 +60,10 @@ class MembershipArray extends Uint8Array {
 
   discardTransient = () => {
     let i = this.length;
-    while (i--) this[i] = this[i] & ~128;
+    while (i--) {
+      console.log(i);
+      this[i] = this[i] & ~128;
+    }
   };
 
   merge = (arr: MembershipArray) => {

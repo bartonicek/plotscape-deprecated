@@ -7,6 +7,7 @@ import { GraphicLayer } from "../plot/GraphicLayer.js";
 export class Squares extends Representation {
   constructor(wrangler: Wrangler) {
     super(wrangler);
+    this.sizeLimits = { min: 0.01, max: 1.5 };
   }
 
   getMappings = (membership?: dtstr.ValidMemberships) => {

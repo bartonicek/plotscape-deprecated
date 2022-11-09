@@ -7,9 +7,14 @@ export abstract class Scale {
   lengthOriginal: number;
   offsetOriginal: number;
   direction: number;
-  expand: number;
+  expand: { lower: number; upper: number };
 
-  constructor(length: number, plot: Plot, direction = 1, expand = 0.1) {
+  constructor(
+    length: number,
+    plot: Plot,
+    direction = 1,
+    expand = { lower: 0.1, upper: 0.1 }
+  ) {
     this.plot = plot;
     this.lengthOriginal = length;
     this.offsetOriginal = this.direction === -1 ? length : 0;

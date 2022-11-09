@@ -24,7 +24,7 @@ export class SquareHeatmap extends Plot {
     this.scales = {
       x: new scls.XYScaleContinuous(this.width, this),
       y: new scls.XYScaleContinuous(this.height, this, -1),
-      size: new scls.LengthScaleContinuous(1, this),
+      size: new scls.AreaScaleContinuous(1, this),
     };
 
     this.representations = {

@@ -1,9 +1,15 @@
+import { Plot } from "./../plot/Plot.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
 
 export class Auxiliary {
+  plot: Plot;
   scales: { [key: string]: any };
   handler: any;
   handlers: any;
+
+  constructor(plot: Plot) {
+    this.plot = plot;
+  }
 
   registerScales = (scales: any) => {
     this.scales = scales;

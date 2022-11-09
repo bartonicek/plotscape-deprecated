@@ -1,19 +1,21 @@
+import { SizeHandler } from "../handlers/SizeHandler.js";
 import { Plot } from "../main.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
 import { Auxiliary } from "./Auxiliary.js";
 
 export class AxisTitle extends Auxiliary {
-  along: string;
-  other: string;
+  sizeHandler: SizeHandler;
+  along: "x" | "y";
+  other: "x" | "y";
   label: string;
-  plot: Plot;
 
-  constructor(along: string, label: string, plot: Plot) {
-    super();
+  constructor(plot: Plot, along: "x" | "y", label: string) {
+    super(plot);
+    this.plot = plot;
+    this.sizeHandler = plot.handlers.size;
     this.along = along;
     this.other = along === "x" ? "y" : "x";
     this.label = label;
-    this.plot = plot;
   }
 
   getLabelMetrics = (context: GraphicLayer) => {
@@ -22,7 +24,7 @@ export class AxisTitle extends Auxiliary {
 
   draw = (context: GraphicLayer) => {
     if (this.label === "_indicator") return;
-    const { scales, along, other, plot } = this;
+    const { sizeHandler, scales, along, other, plot } = this;
 
     const size = Math.floor(plot.fontsize * 1.5);
 
@@ -39,7 +41,7 @@ export class AxisTitle extends Auxiliary {
     context.drawText([coords.x], [coords.y], [this.label], size, rot);
   };
 
-  drawBase = (context: GraphicLayer) => {
+  drawOverlay = (context: GraphicLayer) => {
     this.draw(context);
   };
 }

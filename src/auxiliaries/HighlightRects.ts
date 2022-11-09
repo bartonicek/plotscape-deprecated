@@ -1,4 +1,5 @@
 import * as dtstr from "../datastructures.js";
+import { Plot } from "../main.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
 import { Auxiliary } from "./Auxiliary.js";
 
@@ -9,8 +10,8 @@ export class HighlightRects extends Auxiliary {
   past: dtstr.Rect2Points[];
   empty: boolean;
 
-  constructor(handlers: object) {
-    super();
+  constructor(plot: Plot, handlers: object) {
+    super(plot);
     this.current = [
       [null, null],
       [null, null],

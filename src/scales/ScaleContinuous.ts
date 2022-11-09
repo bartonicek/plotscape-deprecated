@@ -1,17 +1,20 @@
 import { Plot } from "../main.js";
 import { Scale } from "./Scale.js";
+import * as funs from "./../functions.js";
 
 export class ScaleContinuous extends Scale {
   continuous: boolean;
   includeZero: boolean;
   data: number[] = [];
+  dataMinOriginal: number;
+  dataMaxOriginal: number;
 
   constructor(
     length: number,
     plot: Plot,
     direction = 1,
     includeZero = false,
-    expand = 0.1
+    expand = { lower: 0.1, upper: 0.1 }
   ) {
     super(length, plot, direction, expand);
     this.continuous = true;
@@ -19,22 +22,24 @@ export class ScaleContinuous extends Scale {
   }
 
   registerData = (data: number[]) => {
-    this.data = this.includeZero
-      ? [0, Math.max(...data)]
-      : [Math.min(...data), Math.max(...data)];
+    this.data = this.includeZero ? [0, ...data] : data;
+    this.dataMinOriginal = funs.min(data);
+    this.dataMaxOriginal = funs.max(data);
     return this;
   };
 
+  get rangeOriginal() {
+    return this.dataMaxOriginal - this.dataMinOriginal;
+  }
+
   get dataMin() {
-    const { data, expand } = this;
-    return this.includeZero
-      ? 0
-      : Math.min(...data) - expand * (Math.max(...data) - Math.min(...data));
+    const { includeZero, dataMinOriginal, rangeOriginal, expand } = this;
+    return includeZero ? 0 : dataMinOriginal - expand.lower * rangeOriginal;
   }
 
   get dataMax() {
-    const { data, expand } = this;
-    return Math.max(...data) + expand * (Math.max(...data) - Math.min(...data));
+    const { dataMaxOriginal, rangeOriginal, expand } = this;
+    return dataMaxOriginal + expand.upper * rangeOriginal;
   }
 
   get range() {

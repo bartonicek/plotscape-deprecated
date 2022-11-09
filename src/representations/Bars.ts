@@ -11,7 +11,6 @@ export class Bars extends Representation {
     this.widthMultiplier = widthMultiplier;
     this.sizeMultiplier = widthMultiplier;
     this.sizeLimits = { min: 0.01, max: 1 };
-    this.alphaMultiplier = 1;
   }
 
   get y0Scalar() {

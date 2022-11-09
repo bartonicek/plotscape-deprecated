@@ -1,7 +1,8 @@
 export const globalParameters = {
   plot: {
     scaleExpandFactor: 0.1,
-    backgroundColour: `#f2efde`,
+    backgroundColour: `#F7F7F2`,
+    marginColour: `#F7F7F2`,
   },
   reps: {
     colour: [`#cccccc`, `#7fc97f`, `#fdc086`, `#beaed4`, `#386cb0`],

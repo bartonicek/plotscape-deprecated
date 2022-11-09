@@ -47,8 +47,8 @@ export class Cast {
   getSplitOf = (membership?: dtstr.ValidMemberships) => {
     const { acrossVec, indices, uniqueIndices, marker } = this;
 
-    const res = Array.from(Array(uniqueIndices.length), (e) => []);
     let i = indices.length;
+    let res = Array.from(Array(uniqueIndices.length), (e) => []);
 
     while (i--) {
       if (!membership || marker.isOfMembership(i, membership)) {

@@ -10,10 +10,8 @@ export class AxisBox extends Auxiliary {
     context.drawLine([x0, x1], [y0, y0]);
     context.drawLine([x0, x0], [y0, y1]);
   };
-  drawBase = (context: GraphicLayer) => {
-    this.draw(context);
-  };
-  drawHighlight = (context: GraphicLayer) => {
+
+  drawOverlay = (context: GraphicLayer) => {
     this.draw(context);
   };
 }

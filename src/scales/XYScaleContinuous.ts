@@ -7,7 +7,7 @@ export class XYScaleContinuous extends ScaleContinuous {
     plot: Plot,
     direction = 1,
     zero = false,
-    expand = 0.1
+    expand = { lower: 0.1, upper: 0.1 }
   ) {
     super(length, plot, direction, zero, expand);
   }
@@ -28,11 +28,11 @@ export class XYScaleContinuous extends ScaleContinuous {
   }
 
   get plotMin() {
-    return this.pctToUnits(0);
+    return this.pctToUnits(0) as number;
   }
 
   get plotMax() {
-    return this.pctToUnits(1);
+    return this.pctToUnits(1) as number;
   }
 
   dataToPlot = (data: number | number[]) => {

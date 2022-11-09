@@ -3,3 +3,4 @@ export * from "./KeypressHandler.js";
 export * from "./DragHandler.js";
 export * from "./StateHandler.js";
 export * from "./ClickHandler.js";
+export * from "./SizeHandler.js";

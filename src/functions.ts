@@ -1,5 +1,10 @@
 import * as dtstr from "./datastructures.js";
 
+const sort = (arr: any[]) => {
+  if (typeof arr[0] === "number") return arr.sort((a, b) => a - b);
+  return arr.sort();
+};
+
 /**
  * Copy an object with all of its (nested) properties. Use to avoid passing by reference.
  * @param x An object.
@@ -7,6 +12,16 @@ import * as dtstr from "./datastructures.js";
  */
 const deeplyClone = (x: Object) => {
   return JSON.parse(JSON.stringify(x));
+};
+
+/**
+ * Turn a value or an array into a string or array of strings
+ * @param x A value or array
+ * @returns A string or array of strings
+ */
+const stringify = (x: any | any[]) => {
+  if (typeof x === "string" || typeof x[0] === "string") return x;
+  return x.length ? x.map((e) => `${e}`) : `${x}`;
 };
 
 /**
@@ -249,8 +264,7 @@ const prettyBreaks = (x: number[], n = 4) => {
 // Finds the nearest pretty number for each
 const toPretty = (x: number[], n = 4) => {
   const breaks = prettyBreaks(x, n);
-  let i = x.length;
-  const res = Array(x.length);
+  let [i, res] = [x.length, Array(x.length)];
   while (i--) {
     const x2 = breaks.map((e) => (e - x[i]) ** 2);
     res[i] = breaks[x2.indexOf(min(x2))];
@@ -330,6 +344,9 @@ const timeExecution = (fun: Function) => {
 };
 
 export {
+  sort,
+  deeplyClone,
+  stringify,
   identity,
   length,
   sum,

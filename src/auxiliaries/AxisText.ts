@@ -2,18 +2,21 @@ import { Auxiliary } from "./Auxiliary.js";
 import * as funs from "../functions.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
 import { Plot } from "../main.js";
+import { SizeHandler } from "../handlers/SizeHandler.js";
 
 export class AxisText extends Auxiliary {
+  sizeHandler: SizeHandler;
   along: string;
   other: string;
   plot: Plot;
   nbreaks: number;
 
-  constructor(along: string, plot: Plot, nbreaks?: number) {
-    super();
+  constructor(plot: Plot, along: string, nbreaks?: number) {
+    super(plot);
+    this.plot = plot;
+    this.sizeHandler = plot.handlers.size;
     this.along = along;
     this.other = along === "x" ? "y" : "x";
-    this.plot = plot;
     this.nbreaks = nbreaks ?? 4;
   }
 
@@ -39,17 +42,18 @@ export class AxisText extends Auxiliary {
   };
 
   draw = (context: GraphicLayer) => {
-    const { scales, along, other, breaks, plot } = this;
-    const size = plot.fontsize;
+    const { along, other, breaks, sizeHandler } = this;
+    const size = sizeHandler.fontsize;
 
-    const intercepts = Array.from(
-      Array(breaks.length),
-      (e) => scales[other].plotMin + ((along === "x" ? 1 : -1) * size) / 2
-    );
+    const coord0 = sizeHandler.innerCoords[`${other}0`];
+    const min = coord0 + ((along === "x" ? 1 : -1) * size) / 2;
+    const intercepts = Array(breaks.length).fill(min);
 
     const coords = { x: null, y: null };
     coords[along] = breaks;
     coords[other] = intercepts;
+
+    context.context.save();
 
     if (along === "x") {
       context.context.textBaseline = "top";
@@ -61,9 +65,11 @@ export class AxisText extends Auxiliary {
     }
 
     context.drawText(coords.x, coords.y, this.labels, size);
+
+    context.context.restore();
   };
 
-  drawBase = (context: GraphicLayer) => {
+  drawOverlay = (context: GraphicLayer) => {
     this.draw(context);
   };
 }
