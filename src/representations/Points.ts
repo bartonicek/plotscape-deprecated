@@ -11,10 +11,12 @@ export class Points extends Representation {
 
   get defaultRadius() {
     const { x, y } = this.scales;
-    if (x.intervalWidth && y.intervalWidth) {
-      return Math.min(x.intervalWidth, y.intervalWidth);
+    if (x.breakWidth && y.breakWidth) {
+      return Math.min(x.breakWidth, y.breakWidth) / 2;
     }
-    return Math.min(x.length, y.length) / 20;
+    const length = Math.min(...[x, y].map((e) => Math.abs(e.plotScale.range)));
+    const c = 10 * Math.log(this.wrangler.n);
+    return length / c;
   }
 
   getMappings = (membership: dtstr.ValidMemberships) => {
@@ -24,11 +26,13 @@ export class Points extends Representation {
     const radius = getPars(membership).radius;
 
     if (!size.length) {
-      size = Array(x.length).fill(radius * defaultRadius * sizeMultiplier);
-    } else {
-      size = size.map((e) => e * radius * defaultRadius * sizeMultiplier);
+      size = new dtstr.SparseFloat32Array(x.length).fill(
+        radius * defaultRadius * sizeMultiplier
+      );
+      return [x, y, size];
     }
 
+    size = size.map((e) => e * radius * defaultRadius * sizeMultiplier);
     return [x, y, size];
   };
 
@@ -50,9 +54,15 @@ export class Points extends Representation {
   get boundingRects() {
     const [x, y, size] = this.getMappings(1);
     const c = 1 / Math.sqrt(2);
-    return x.map((xi, i) => [
-      [xi - c * size[i], y[i] - c * size[i]],
-      [xi + c * size[i], y[i] + c * size[i]],
-    ]);
+
+    let [i, res] = [x.length, Array(x.length)];
+    while (i--) {
+      res[i] = [
+        [x[i] - c * size[i], y[i] - c * size[i]],
+        [x[i] + c * size[i], y[i] + c * size[i]],
+      ];
+    }
+
+    return res;
   }
 }

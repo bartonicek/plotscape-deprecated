@@ -14,6 +14,13 @@ export class GraphicLayer {
     this.containerDiv = containerDiv;
     this.canvas = document.createElement("canvas");
     this.context = this.canvas.getContext("2d");
+    this.defaultPars = {
+      colour: `#000000`,
+      strokeColour: null,
+      strokeWidth: null,
+      alpha: 1,
+      radius: 1,
+    };
     this.resize();
   }
 
@@ -37,13 +44,12 @@ export class GraphicLayer {
     this.context.scale(this.scaleFactor, this.scaleFactor);
   };
 
-  dropMissing = (...vectors: any[]) => {
-    let i = vectors[0].length;
-    while (i--) {
-      if (vectors.map((e) => e[i]).some((e) => e === null || e < 0))
-        vectors.map((e) => e.splice(i, 1));
+  anyMissing = (i: number, ...arrs: dtstr.SparseFloat32Array[]) => {
+    let j = arrs.length;
+    while (j--) {
+      if (arrs[j].missing.has(i)) return true;
     }
-    return vectors;
+    return false;
   };
 
   toAlpha = (col: string, alpha: number) => {
@@ -71,66 +77,86 @@ export class GraphicLayer {
   };
 
   drawBarsV = (
-    x: number[],
-    y: number[],
-    y0: number[],
-    width: number[],
+    x: dtstr.SparseFloat32Array,
+    y0: dtstr.SparseFloat32Array,
+    y1: dtstr.SparseFloat32Array,
+    width: dtstr.SparseFloat32Array,
     pars = this.defaultPars
   ) => {
-    const [xs, ys, y0s, ws] = this.dropMissing(x, y, y0, width);
     const { colour, strokeColour, strokeWidth, alpha } = pars;
-    const context = this.context;
+    const [context, w] = [this.context, width];
+    const missing = new Set(
+      [x, y0, y1, width].map((e) => [...e.missing]).flat()
+    );
+
     context.save();
     context.fillStyle = this.toAlpha(colour, alpha);
     context.strokeStyle = strokeColour;
     context.lineWidth = strokeWidth;
-    xs.forEach((e, i) => {
-      if (colour) context.fillRect(e - ws[i] / 2, ys[i], ws[i], y0s[i] - ys[i]);
+
+    let i = x.length;
+    while (i--) {
+      if (missing.has(i)) continue;
+      if (colour) context.fillRect(x[i] - w[i] / 2, y1[i], w[i], y0[i] - y1[i]);
       if (strokeColour)
-        context.strokeRect(e - ws[i] / 2, ys[i], ws[i], y0s[i] - ys[i]);
-    });
+        context.strokeRect(x[i] - w[i] / 2, y1[i], w[i], y0[i] - y1[i]);
+    }
+
     context.restore();
   };
 
   drawPoints = (
-    x: number[],
-    y: number[],
-    radius: number[],
+    x: dtstr.SparseFloat32Array,
+    y: dtstr.SparseFloat32Array,
+    radius: dtstr.SparseFloat32Array,
     pars = this.defaultPars
   ) => {
     const context = this.context;
     const { colour, strokeColour, strokeWidth, alpha } = pars;
+    const missing = new Set([x, y, radius].map((e) => [...e.missing]).flat());
+
     context.save();
     context.fillStyle = this.toAlpha(colour, alpha);
     context.strokeStyle = strokeColour;
     context.lineWidth = strokeWidth;
-    x.forEach((e, i) => {
+
+    let i = x.length;
+    while (i--) {
+      if (missing.has(i)) continue;
       context.beginPath();
-      context.arc(e, y[i], radius[i] / 2, 0, Math.PI * 2);
+      context.arc(x[i], y[i], radius[i], 0, Math.PI * 2);
       if (strokeColour) context.stroke();
       if (colour) context.fill();
-    });
+    }
+
     context.restore();
   };
 
   drawRectsHW = (
-    x: number[],
-    y: number[],
-    h: number[],
-    w: number[],
+    x: dtstr.SparseFloat32Array,
+    y: dtstr.SparseFloat32Array,
+    h: dtstr.SparseFloat32Array,
+    w: dtstr.SparseFloat32Array,
     pars = this.defaultPars
   ) => {
     const context = this.context;
     const { colour, strokeColour, strokeWidth, alpha } = pars;
+    const missing = new Set([x, y, h, w].map((e) => [...e.missing]).flat());
+
     context.save();
     context.fillStyle = this.toAlpha(colour, alpha);
     context.strokeStyle = strokeColour;
     context.lineWidth = strokeWidth;
-    x.forEach((e, i) => {
-      if (colour) context.fillRect(e - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
+
+    let i = x.length;
+    while (i--) {
+      if (missing.has(i)) continue;
+      if (colour)
+        context.fillRect(x[i] - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
       if (strokeColour)
-        context.strokeRect(e - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
-    });
+        context.strokeRect(x[i] - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
+    }
+
     context.restore();
   };
 
@@ -141,7 +167,6 @@ export class GraphicLayer {
     y1: number[],
     pars = this.defaultPars
   ) => {
-    const [x0s, y0s, x1s, y1s] = this.dropMissing(x0, y0, x1, y1);
     const context = this.context;
     const { colour, strokeColour, strokeWidth, alpha } = pars;
 
@@ -153,24 +178,28 @@ export class GraphicLayer {
     context.lineWidth = strokeWidth;
 
     while (i--) {
-      const ws = x1s[i] - x0s[i];
-      const hs = y0s[i] - y1s[i];
-      context.fillRect(x0s[i], y0s[i], ws, -hs);
+      const ws = x1[i] - x0[i];
+      const hs = y0[i] - y1[i];
+      context.fillRect(x0[i], y0[i], ws, -hs);
     }
     context.restore();
   };
 
   drawLine = (x: number[], y: number[], col = "black") => {
     const context = this.context;
+
     context.save();
     context.beginPath();
     context.strokeStyle = col;
     context.moveTo(x[0], y[0]);
     x.shift();
     y.shift();
-    x.forEach((e, i) => {
-      context.lineTo(e, y[i]);
-    });
+
+    let i = x.length;
+    while (i--) {
+      context.lineTo(x[i], y[i]);
+    }
+
     context.stroke();
     context.restore();
   };
@@ -183,14 +212,18 @@ export class GraphicLayer {
     rotate?: number
   ) => {
     const context = this.context;
+
     context.save();
     context.font = `${size}px Times New Roman`;
-    x.forEach((e, i) => {
-      context.translate(e, y[i]);
+
+    let i = x.length;
+    while (i--) {
+      context.translate(x[i], y[i]);
       if (rotate) context.rotate((rotate / 360) * Math.PI * 2);
       context.fillText(labels[i], 0, 0);
-      context.translate(-e, -y[i]);
-    });
+      context.translate(-x[i], -y[i]);
+    }
+
     context.restore();
   };
 

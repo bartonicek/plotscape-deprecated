@@ -17,6 +17,20 @@ const isArray = <Type>(
   return Array.isArray(x) || ArrayBuffer.isView(x);
 };
 
+class SparseFloat32Array extends Float32Array {
+  missing: Set<number>;
+  constructor(arg: number | VectorGeneric | SparseFloat32Array) {
+    if (arg instanceof SparseFloat32Array) {
+      super(arg.length);
+      this.missing = arg.missing;
+      return;
+    }
+    const n = typeof arg === "number" ? arg : arg.length;
+    super(n);
+    this.missing = new Set();
+  }
+}
+
 type MethodsOf<Type> = Pick<
   Type,
   {
@@ -32,13 +46,13 @@ class DataFrame {
   [key: string]: VectorGeneric;
   constructor(data: { [key: string]: VectorGeneric }) {
     Object.keys(data).forEach((e) => (this[e] = data[e]));
-  }
-  get _indicator() {
-    return Array(this[Object.keys(this)[0]].length).fill(1);
+    this._indicator = Array(
+      (this[Object.keys(this)[0]] as VectorGeneric).length
+    ).fill(1);
   }
 }
 
-type ValidMappings = "x" | "y" | "size" | "col" | "shape" | "_indicator";
+type ValidMappings = "x" | "y" | "size" | "fillHeight" | "_indicator";
 class Mapping extends Map<ValidMappings, string> {
   constructor(...mappings: [ValidMappings, string][]) {
     super([...mappings]);
@@ -85,6 +99,7 @@ type Globals = {
 
 export {
   isArray,
+  SparseFloat32Array,
   MethodsOf,
   DataFrame,
   VectorGeneric,

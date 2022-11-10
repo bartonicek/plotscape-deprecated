@@ -35,30 +35,37 @@ export class Bars extends Representation {
   drawBase = (context: GraphicLayer) => {
     const [x, y] = this.getMappings();
     const { y0Scalar, widthScalar, alphaMultiplier } = this;
-    const y0 = Array.from(Array(x.length), (e) => y0Scalar);
-    const width = Array.from(Array(x.length), (e) => widthScalar);
+    const y0 = new dtstr.SparseFloat32Array(x.length).fill(y0Scalar);
+    const width = new dtstr.SparseFloat32Array(x.length).fill(widthScalar);
     const pars = { ...this.getPars(1), alpha: alphaMultiplier };
-    context.drawBarsV(x, y, y0, width, pars);
+    context.drawBarsV(x, y0, y, width, pars);
   };
 
   drawHighlight = (context: GraphicLayer) => {
     dtstr.highlightMembershipArray.forEach((e) => {
       const [x, y] = this.getMappings(e);
+
       if (!(x.length > 0)) return;
       const { y0Scalar, widthScalar } = this;
-      const y0 = Array.from(Array(x.length), (e) => y0Scalar);
-      const width = Array.from(Array(x.length), (e) => widthScalar);
+      const y0 = new dtstr.SparseFloat32Array(x.length).fill(y0Scalar);
+      const width = new dtstr.SparseFloat32Array(x.length).fill(widthScalar);
       const pars = { ...this.getPars(e), alpha: 1 };
-      context.drawBarsV(x, y, y0, width, pars);
+      context.drawBarsV(x, y0, y, width, pars);
     });
   };
 
   get boundingRects() {
     const [x, y] = this.getMappings();
     const [wh, y0] = [this.widthScalar / 2, this.y0Scalar];
-    return x.map((xi, i) => [
-      [xi - wh, y0],
-      [xi + wh, y[i]],
-    ]);
+
+    let [i, res] = [x.length, Array(x.length)];
+    while (i--) {
+      res[i] = [
+        [x[i] - wh, y0],
+        [x[i] + wh, y[i]],
+      ];
+    }
+
+    return res;
   }
 }

@@ -1,102 +1,54 @@
-import { Plot } from "../main.js";
-import { Scale } from "./Scale.js";
-import * as funs from "./../functions.js";
+import * as dtstr from "../datastructures.js";
 
-export class ScaleContinuous extends Scale {
-  continuous: boolean;
-  includeZero: boolean;
-  data: number[] = [];
-  dataMinOriginal: number;
-  dataMaxOriginal: number;
+export class ScaleContinuous {
+  min: number;
+  max: number;
 
-  constructor(
-    length: number,
-    plot: Plot,
-    direction = 1,
-    includeZero = false,
-    expand = { lower: 0.1, upper: 0.1 }
-  ) {
-    super(length, plot, direction, expand);
-    this.continuous = true;
-    this.includeZero = includeZero;
-  }
-
-  registerData = (data: number[]) => {
-    this.data = this.includeZero ? [0, ...data] : data;
-    this.dataMinOriginal = funs.min(data);
-    this.dataMaxOriginal = funs.max(data);
+  setLimits = (min: number, max: number) => {
+    this.min = min;
+    this.max = max;
     return this;
   };
 
-  get rangeOriginal() {
-    return this.dataMaxOriginal - this.dataMinOriginal;
-  }
-
-  get dataMin() {
-    const { includeZero, dataMinOriginal, rangeOriginal, expand } = this;
-    return includeZero ? 0 : dataMinOriginal - expand.lower * rangeOriginal;
-  }
-
-  get dataMax() {
-    const { dataMaxOriginal, rangeOriginal, expand } = this;
-    return dataMaxOriginal + expand.upper * rangeOriginal;
-  }
-
   get range() {
-    return this.dataMax - this.dataMin;
+    return this.max - this.min;
   }
 
-  inRange = (x: number) => {
-    return x >= this.dataMin && x <= this.dataMax;
-  };
-
-  pctToData = (pct: number | number[]) => {
-    if (pct === null) return null;
-
-    const { dataMin, range } = this;
-    if (typeof pct === "number") return dataMin + pct * range;
-
-    return pct.map((e) => {
-      if (e === null) return null;
-      return dataMin + e * range;
-    });
-  };
-
-  dataToPct = (data: number | number[]) => {
-    if (data === null) return null;
-
-    const { dataMin, range } = this;
-    if (typeof data === "number") return (data - dataMin) / range;
-
-    return data.map((e) => {
-      if (e === null) return null;
-      return (e - dataMin) / range;
-    });
-  };
-
-  dataToUnits = (data: number | number[]) => {
-    if (data === null) return null;
-
-    const { dataMin, length, offset, direction, range } = this;
-    if (typeof data === "number")
-      return offset + (direction * length * (data - dataMin)) / range;
-
-    return data.map((e) => {
-      if (e === null) return null;
-      return offset + direction * length * ((e - dataMin) / range);
-    });
-  };
-
-  unitsToData = (units: number | number[]) => {
+  unitsToPct = (units: null | number | number[] | dtstr.SparseFloat32Array) => {
     if (units === null) return null;
+    if (dtstr.isArray(units)) {
+      const isSparse = units instanceof dtstr.SparseFloat32Array;
+      let [i, res] = [units.length, new dtstr.SparseFloat32Array(units)];
 
-    const { dataMin, length, offset, direction, range } = this;
-    if (typeof units === "number")
-      return dataMin + (direction * range * (units - offset)) / length;
+      while (i--) {
+        if (isSparse && units.missing.has(i)) continue;
+        if (units[i] === null) {
+          res.missing.add(i);
+          continue;
+        }
+        res[i] = (units[i] - this.min) / this.range;
+      }
+      return res;
+    }
+    return (units - this.min) / this.range;
+  };
 
-    return units.map((e) => {
-      if (e === null) return null;
-      return dataMin + direction * range * ((e - offset) / length);
-    });
+  pctToUnits = (pct: null | number | number[] | dtstr.SparseFloat32Array) => {
+    if (pct === null) return null;
+    if (dtstr.isArray(pct)) {
+      const isSparse = pct instanceof dtstr.SparseFloat32Array;
+      let [i, res] = [pct.length, new dtstr.SparseFloat32Array(pct)];
+
+      while (i--) {
+        if (isSparse && pct.missing.has(i)) continue;
+        if (pct[i] === null) {
+          res.missing.add(i);
+          continue;
+        }
+        res[i] = this.min + pct[i] * this.range;
+      }
+      return res;
+    }
+    return this.min + pct * this.range;
   };
 }

@@ -48,9 +48,23 @@ export class Representation {
     membership?: dtstr.ValidMemberships
   ) => {
     let res = this.wrangler[mapping]?.extract(membership);
-    res = this.scales[mapping]?.dataToPlot(res);
-    return res ?? [];
+    if (!res) return [];
+    return this.scales[mapping].dataToPlot(res);
   };
+
+  // getMappings2 = (
+  //   membership: dtstr.ValidMemberships,
+  //   ...mappings: dtstr.ValidMappings[]
+  // ) => {
+  //   const { scales, wrangler } = this;
+  //   let [i, res] = [mappings.length, Array(mappings.length)];
+  //   while (i--) {
+  //     const mapping = wrangler[mappings[i]];
+  //     res[i] = scales[mapping].dataToPlot(
+  //       wrangler[mappings[i]]?.extract(membership)
+  //     );
+  //   }
+  // };
 
   get boundingRects() {
     return [];

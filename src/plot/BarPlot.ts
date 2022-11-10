@@ -20,8 +20,8 @@ export class BarPlot extends Plot {
     };
 
     this.scales = {
-      x: new scls.XYScaleDiscrete(this.width, this),
-      y: new scls.XYScaleContinuous(this.height, this, -1, true),
+      x: new scls.PlotScaleDiscrete(),
+      y: new scls.PlotScaleContinuous(true),
     };
 
     this.representations = {

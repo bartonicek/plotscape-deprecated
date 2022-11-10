@@ -3,6 +3,7 @@ import * as funs from "../functions.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
 import { Plot } from "../main.js";
 import { SizeHandler } from "../handlers/SizeHandler.js";
+import { PlotScaleDiscrete } from "../scales/PlotScaleDiscrete.js";
 
 export class AxisText extends Auxiliary {
   sizeHandler: SizeHandler;
@@ -21,9 +22,12 @@ export class AxisText extends Auxiliary {
   }
 
   get dataBreaks() {
-    return (
-      this.scales[this.along].values ??
-      funs.prettyBreaks(this.scales[this.along].data, this.nbreaks)
+    if (this.scales[this.along] instanceof PlotScaleDiscrete) {
+      return this.scales[this.along].dataRepresentation;
+    }
+    return funs.prettyBreaks(
+      this.scales[this.along].dataRepresentation,
+      this.nbreaks
     );
   }
 
@@ -65,7 +69,6 @@ export class AxisText extends Auxiliary {
     }
 
     context.drawText(coords.x, coords.y, this.labels, size);
-
     context.context.restore();
   };
 

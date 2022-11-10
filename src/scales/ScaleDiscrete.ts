@@ -1,66 +1,35 @@
-import { VectorGeneric } from "../datastructures.js";
-import { Plot } from "../main.js";
-import { Scale } from "./Scale.js";
-import * as funs from "./../functions.js";
+import * as dtstr from "../datastructures.js";
+import * as funs from "../functions.js";
 
-export class ScaleDiscrete extends Scale {
-  discrete: boolean;
-  values: VectorGeneric;
-  positionsOriginal: number[];
+export class ScaleDiscrete {
+  values: any[];
+  positions: number[];
+  positionValueMap: Map<typeof this.values[number], number>;
 
-  constructor(
-    length: number,
-    plot: Plot,
-    direction = 1,
-    expand = { lower: 0, upper: 0 }
-  ) {
-    super(length, plot, direction, expand);
-    this.discrete = true;
-    this.values = [];
-  }
-
-  registerData = (data: VectorGeneric) => {
-    this.data = data;
-    const arr = Array.from(new Set([...data]));
-
-    this.values =
-      typeof arr[0] === "number"
-        ? (arr as number[]).sort((a, b) => a - b)
-        : arr.sort();
-
-    this.positionsOriginal = Array.from(
-      Array(this.values.length),
-      (e, i) => (i + 1) / (this.values.length + 1)
+  setValues = (values: any[], sorted = false) => {
+    this.values = sorted ? funs.unique(values) : funs.sort(funs.unique(values));
+    const n = this.values.length;
+    this.positions = [...Array(n).keys()].map((i) => (i + 1) / (n + 1));
+    this.positionValueMap = new Map();
+    this.values.forEach((e, i) =>
+      this.positionValueMap.set(e, this.positions[i])
     );
     return this;
   };
 
-  get range() {
-    return 1 + this.expand.lower + this.expand.upper;
-  }
-
-  get positions() {
-    const { lower, upper } = this.expand;
-    const shift = upper - lower + (0.5 - 0.5 / this.range);
-    return this.positionsOriginal.map((e) => e / this.range + shift);
-  }
-
-  dataToUnits = (x: any | any[]) => {
-    if (x == null) return null;
-
-    const { values, length, direction, positions, offset, expand } = this;
-    const strX = funs.stringify(x);
-    const strValues = funs.stringify(values);
-    const len = length;
-
-    if (typeof strX === "string" && strValues.indexOf(strX) !== -1) {
-      return offset + direction * len * positions[strValues.indexOf(strX)];
-    }
-
-    return strX.map((e: any) => {
-      if (strValues.indexOf(e) !== -1) {
-        return offset + direction * len * positions[strValues.indexOf(e)];
+  unitsToPct = (units: any | any[]) => {
+    if (units === null) return null;
+    if (dtstr.isArray(units)) {
+      let [i, res] = [units.length, new dtstr.SparseFloat32Array(units.length)];
+      while (i--) {
+        if (units[i] === null) {
+          res.missing.add(i);
+          continue;
+        }
+        res[i] = this.positionValueMap.get(units[i]);
       }
-    });
+      return res;
+    }
+    return this.positionValueMap.get(units) as number;
   };
 }

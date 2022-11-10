@@ -8,7 +8,7 @@ export class Scene {
   sceneDiv: HTMLDivElement;
   data: dtstr.DataFrame;
   layout: number[][];
-  nObs: number;
+  nCases: number;
   nPlots: number;
   nPlotsOfType: number[];
   plots: { [name: string]: Plot };
@@ -24,14 +24,14 @@ export class Scene {
     this.data = data;
     this.layout = opts?.layout;
 
-    this.nObs = data[Object.keys(data)[0]].length;
+    this.nCases = data[Object.keys(data)[0]].length;
     this.nPlots = 0;
     this.nPlotsOfType = Array(dtstr.plotTypeArray.length).fill(0);
 
     this.plots = {};
     this.plotIds = [];
     this.globals = {
-      marker: new hndl.MarkerHandler(this.nObs),
+      marker: new hndl.MarkerHandler(this.nCases),
       keypress: new hndl.KeypressHandler(),
       state: new hndl.StateHandler(),
     };

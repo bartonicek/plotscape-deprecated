@@ -100,13 +100,9 @@ const layout = [
 const scene = new PLOTSCAPE.Scene(div1, data)
   .addPlotWrapper("scatter", new PLOTSCAPE.Mapping(["x", "wt"], ["y", "mpg"]))
   .addPlotWrapper("bar", new PLOTSCAPE.Mapping(["x", "cyl"]))
-  .addPlotWrapper("histo", new PLOTSCAPE.Mapping(["x", "disp"]))
+  //  .addPlotWrapper("histo", new PLOTSCAPE.Mapping(["x", "wt"]));
   .addPlotWrapper("square", new PLOTSCAPE.Mapping(["x", "gear"], ["y", "am"]));
-
-const scale1 = new PLOTSCAPE.PlotScaleDiscrete2();
-const arr1 = [1, 2, 3, 4, 5];
-scale1.setPlotLimits(0, 500).registerData(arr1);
-
-console.log(scale1.dataToPlot(arr1[0]));
-scale1.expand(0.1, 0.1);
-console.log(scale1.dataToPlot(arr1[0]));
+// .addPlotWrapper(
+//   "squareheat",
+//   new PLOTSCAPE.Mapping(["x", "wt"], ["y", "mpg"])
+// );

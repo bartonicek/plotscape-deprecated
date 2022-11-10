@@ -21,8 +21,8 @@ export class HistoPlot extends Plot {
     };
 
     this.scales = {
-      x: new scls.XYScaleContinuous(this.width, this),
-      y: new scls.XYScaleContinuous(this.height, this, -1, true),
+      x: new scls.PlotScaleContinuous(),
+      y: new scls.PlotScaleContinuous(true),
     };
 
     this.representations = {

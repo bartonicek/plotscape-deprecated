@@ -1,17 +1,27 @@
-import { ScaleContinuous2 } from "./ScaleContinuous2.js";
-import { ScaleDiscrete2 } from "./ScaleDiscrete2.js";
+import { ScaleContinuous } from "./ScaleContinuous.js";
+import { ScaleDiscrete } from "./ScaleDiscrete.js";
 
-export class PlotScaleDiscrete2 {
-  dataScale: ScaleDiscrete2;
-  expandScale: ScaleContinuous2;
-  plotScale: ScaleContinuous2;
+export class PlotScaleDiscrete {
+  readonly continuous: boolean;
+  dataScale: ScaleDiscrete;
+  expandScale: ScaleContinuous;
+  plotScale: ScaleContinuous;
   zero: boolean;
+  expandMin: number;
+  expandMax: number;
 
   constructor(zero = false) {
-    this.dataScale = new ScaleDiscrete2();
-    this.expandScale = new ScaleContinuous2().setLimits(0, 1);
-    this.plotScale = new ScaleContinuous2();
+    this.continuous = false;
+    this.dataScale = new ScaleDiscrete();
+    this.expandScale = new ScaleContinuous().setLimits(0, 1);
+    this.plotScale = new ScaleContinuous();
     this.zero = zero;
+    this.expandMin = 0;
+    this.expandMax = 0;
+  }
+
+  get dataRepresentation() {
+    return this.dataScale.values;
   }
 
   get plotMin() {
@@ -31,6 +41,8 @@ export class PlotScaleDiscrete2 {
   expand = (min: number, max: number) => {
     this.expandScale.min -= min;
     this.expandScale.max += max;
+    this.expandMin += min;
+    this.expandMax += max;
     return this;
   };
 
@@ -50,8 +62,6 @@ export class PlotScaleDiscrete2 {
 
   dataToPlot = (data: any | any[]) => {
     const { dataScale, expandScale, plotScale } = this;
-    return plotScale.pctToUnits(
-      expandScale.unitsToPct(dataScale.unitsToPct(data))
-    );
+    return plotScale.pctToUnits(dataScale.unitsToPct(data));
   };
 }

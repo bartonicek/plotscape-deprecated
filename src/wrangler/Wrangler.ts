@@ -4,20 +4,21 @@ import { MarkerHandler } from "../handlers/MarkerHandler.js";
 import { Cast } from "./Cast.js";
 
 export class Wrangler {
+  n: number;
   data: dtstr.DataFrame;
   mapping: dtstr.Mapping;
   marker: MarkerHandler;
   by: Set<string>;
   what: Set<string>;
   indices: number[];
-  x: Cast;
-  y: Cast;
+  nObjects: number;
 
   constructor(
     data: dtstr.DataFrame,
     mapping: dtstr.Mapping,
     marker: MarkerHandler
   ) {
+    this.n = data[Object.keys(data)[0]].length;
     this.data = data;
     this.mapping = mapping;
     this.marker = marker;
@@ -27,7 +28,7 @@ export class Wrangler {
   }
 
   getVariable = (mapping: dtstr.ValidMappings) => {
-    return this.data[this.mapping.get(mapping)];
+    return this.data[this.mapping.get(mapping)] as dtstr.VectorGeneric;
   };
 
   extractAsIs = (...mappings: dtstr.ValidMappings[]) => {
@@ -90,10 +91,14 @@ export class Wrangler {
 
   assignIndices = () => {
     const { what, by } = this;
-    const splittingVars = Array.from(by).map((e) => this[e].acrossVec);
+    const splittingVars = Array.from(by).map((e) => this[e].transformedData);
     this.indices = funs.uniqueRowIds(splittingVars);
+
+    this.nObjects = Array.from(new Set([...this.indices])).length;
+
     Array.from([...by, ...what]).map((e) => {
       this[e].indices = this.indices;
+      this[e].nObjects = this.nObjects;
     });
     return this;
   };

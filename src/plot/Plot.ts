@@ -6,12 +6,21 @@ import * as auxs from "../auxiliaries/auxiliaries.js";
 import * as hndl from "../handlers/handlers.js";
 import { GraphicStack } from "./GraphicStack.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
+import { PlotScaleContinuous } from "../scales/scales.js";
 
 const layers = ["layerBase", "layerUser", "layerHighlight", "layerOverlay"];
 
 export class Plot extends GraphicStack {
   id: string;
-  scales: { [key: string]: scls.Scale };
+  scales: {
+    x: scls.PlotScaleContinuous | scls.PlotScaleDiscrete;
+    y: scls.PlotScaleContinuous | scls.PlotScaleDiscrete;
+    [key: string]:
+      | scls.PlotScaleContinuous
+      | scls.PlotScaleDiscrete
+      | scls.AreaScaleContinuous
+      | scls.LengthScaleContinuous;
+  };
   representations: { [key: string]: reps.Representation };
   auxiliaries: {
     [key: string]: auxs.Auxiliary;
@@ -39,7 +48,7 @@ export class Plot extends GraphicStack {
     this.id = id;
     this.representations = {};
     this.wranglers = {};
-    this.scales = {};
+    this.scales = { x: null, y: null };
     this.handlers = {
       marker: globals.marker,
       keypress: globals.keypress,
@@ -77,8 +86,9 @@ export class Plot extends GraphicStack {
   resize = () => {
     const { handlers, scales } = this;
     handlers.size.resize();
-    scales.x.setLength(handlers.size.width);
-    scales.y.setLength(handlers.size.height);
+    const { bottom, left, top, right } = handlers.size.margins;
+    scales.x.setPlotLimits(left, handlers.size.width - right);
+    scales.y.setPlotLimits(handlers.size.height - bottom, top);
     layers.forEach((e) => this[e].resize());
   };
 
@@ -232,6 +242,10 @@ export class Plot extends GraphicStack {
     } = this;
 
     this.handlers.drag.state = this.handlers.state;
+    this.resize();
+
+    if (scales.x.continuous) scales.x.expand(0.1, 0.1);
+    if (scales.y.continuous) scales.y.expand(0.1, 0.1);
 
     Object.keys(scales).forEach((e) => {
       scales[e].registerData?.(this.getUnique(e));

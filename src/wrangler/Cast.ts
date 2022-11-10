@@ -3,8 +3,12 @@ import * as funs from "../functions.js";
 import { MarkerHandler } from "../handlers/MarkerHandler.js";
 
 export class Cast {
-  vector: dtstr.VectorGeneric;
+  data: dtstr.VectorGeneric;
+  _transformedData: dtstr.VectorGeneric;
   marker: MarkerHandler;
+  memoCache: Map<string, number>;
+
+  nObjects: number;
   indices: number[];
   allUnique: boolean;
   withinFun: Function;
@@ -12,11 +16,13 @@ export class Cast {
   acrossFun: Function;
   acrossArgs: any[];
 
-  constructor(vector: dtstr.VectorGeneric) {
-    this.vector = vector;
+  constructor(data: dtstr.VectorGeneric) {
+    this.data = data;
     this.marker = null;
     this.indices = null;
     this.allUnique = false;
+
+    this.memoCache = new Map();
 
     this.acrossFun = funs.identity;
     this.acrossArgs = [];
@@ -25,64 +31,57 @@ export class Cast {
     this.withinArgs = [];
   }
 
-  get uniqueIndices() {
-    return Array.from(new Set(this.indices));
+  get transformedData() {
+    if (!this._transformedData) {
+      this._transformedData = this.acrossFun(this.data, ...this.acrossArgs);
+    }
+    return this._transformedData;
   }
 
-  get acrossVec() {
-    return this.acrossFun(this.vector, ...this.acrossArgs);
-  }
+  extract = (membership?: dtstr.ValidMemberships) => {
+    const { marker, memoCache, withinFun, withinArgs, transformedData } = this;
 
-  get defaultSplit() {
-    const { acrossVec, indices, uniqueIndices } = this;
+    if (this.allUnique) {
+      if (!membership) return transformedData;
+      return transformedData.filter((_, i) =>
+        marker.isOfMembership(i, membership)
+      );
+    }
 
-    // Split vector array into sub-arrays based on indices
-    const res = uniqueIndices.map((uniqueIndex) =>
-      indices.flatMap((index, i) => (index === uniqueIndex ? acrossVec[i] : []))
-    );
-    return res;
-  }
-
-  // No argument: default split, across all memberships
-  getSplitOf = (membership?: dtstr.ValidMemberships) => {
-    const { acrossVec, indices, uniqueIndices, marker } = this;
-
-    let i = indices.length;
-    let res = Array.from(Array(uniqueIndices.length), (e) => []);
+    let [i, j, subArr, res] = [
+      this.indices.length,
+      this.nObjects,
+      Array.from(Array(this.nObjects), (e) => []),
+      Array(this.nObjects).fill(null),
+    ];
 
     while (i--) {
       if (!membership || marker.isOfMembership(i, membership)) {
-        res[indices[i]].push(acrossVec[i]);
+        subArr[this.indices[i]].push(this.transformedData[i]);
       }
+    }
+
+    while (j--) {
+      if (subArr[j].length) {
+        const arrString = funs.tabulateAndStringify(subArr[j]);
+        if (memoCache.has(arrString)) {
+          res[j] = memoCache.get(arrString);
+          continue;
+        }
+        const temp = withinFun(subArr[j], ...withinArgs);
+        res[j] = temp;
+        memoCache.set(arrString, temp);
+        continue;
+      }
+      res[j] = null;
     }
     return res;
-  };
-
-  extract = (membership?: dtstr.ValidMemberships) => {
-    const { marker, allUnique, withinFun, withinArgs, acrossVec, getSplitOf } =
-      this;
-
-    if (membership) {
-      if (allUnique) {
-        // Members + no split + across trans.
-        return (
-          acrossVec.filter((_, i) => marker.isOfMembership(i, membership)) ?? []
-        );
-      }
-      // Members + split + across trans. + within trans.
-      return getSplitOf(membership).map((e) => withinFun(e, ...withinArgs));
-    }
-
-    // All + no split + across trans. only
-    if (allUnique) return acrossVec;
-
-    // All + split + across trans. + within trans.
-    return getSplitOf().map((e) => withinFun(e, ...withinArgs));
   };
 
   registerAcross = (fun: Function, ...args: any[]) => {
     this.acrossFun = fun;
     this.acrossArgs = args;
+    this._transformedData = this.acrossFun(this.data, ...this.acrossArgs);
     return this;
   };
 

@@ -165,9 +165,24 @@ const match = <Type>(x: Type[], values: Type[]): number[] | null => {
  * @param x An array
  * @returns A value (if all values in `x` are the same) or an array of values
  */
-const unique = <Type>(x: Type[]): Type[] | Type | null => {
-  const uniqueArray = Array.from(new Set(x));
-  return uniqueArray.length === 1 ? uniqueArray[0] : uniqueArray;
+const unique = <Type>(x: Type[], flatten = true) => {
+  const u = Array.from(new Set(x));
+  if (flatten && u.length === 1) return u[0];
+  return u as Type[];
+};
+
+const tabulate = <Type>(arr: Type[]): [Type[], Uint16Array] => {
+  const u = unique(arr, false) as Type[];
+  let [i, n] = [arr.length, new Uint16Array(u.length)];
+  while (i--) n[u.findIndex((e) => e == arr[i])]++;
+  return [u, n];
+};
+
+const tabulateAndStringify = <Type>(arr: Type[]): string => {
+  const [u, n] = tabulate(arr);
+  let [i, str] = [u.length, ""];
+  while (i--) str += `,${u[i]}:${n[i]}`;
+  return str;
 };
 
 const accessDeep = (obj: Object, ...props: string[]) => {
@@ -248,7 +263,7 @@ const prettyBreaks = (x: number[], n = 4) => {
   const dists = neatValues.map((e) => (e - unitGross / 10 ** base) ** 2);
   const unitNeat = 10 ** base * neatValues[dists.indexOf(min(dists))];
 
-  const big = Math.abs(base) > 4;
+  const big = Math.abs(base) >= 3;
   const minimumNeat = Math.ceil(minimum / unitNeat) * unitNeat;
   const maximumNeat = Math.floor(maximum / unitNeat) * unitNeat;
   const middle = Array.from(
@@ -360,6 +375,8 @@ export {
   which,
   match,
   unique,
+  tabulate,
+  tabulateAndStringify,
   throttle,
   accessDeep,
   accessUnpeel,

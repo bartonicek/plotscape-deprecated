@@ -61,7 +61,6 @@ class MembershipArray extends Uint8Array {
   discardTransient = () => {
     let i = this.length;
     while (i--) {
-      console.log(i);
       this[i] = this[i] & ~128;
     }
   };
