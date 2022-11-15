@@ -1,67 +1,85 @@
-import * as funs from "../functions.js";
-import { ScaleContinuous } from "./ScaleContinuous.js";
+import * as sprs from "../sparsearrays.js";
 
 export class PlotScaleContinuous {
   readonly continuous: boolean;
-  dataScale: ScaleContinuous;
-  expandScale: ScaleContinuous;
-  plotScale: ScaleContinuous;
+  readonly zero: boolean;
+  plotMin: number;
+  plotMax: number;
+  private _dataMin: number;
+  private _dataMax: number;
   expandMin: number;
   expandMax: number;
-  zero: boolean;
 
   constructor(zero = false) {
     this.continuous = true;
-    this.dataScale = new ScaleContinuous();
-    this.expandScale = new ScaleContinuous().setLimits(0, 1);
-    this.plotScale = new ScaleContinuous();
     this.zero = zero;
+    this.plotMin = 0;
+    this.plotMax = 0;
+    this._dataMax = 0;
+    this._dataMin = 0;
     this.expandMin = 0;
     this.expandMax = 0;
   }
 
+  get plotRange() {
+    return this.plotMax - this.plotMin;
+  }
+
+  get dataMin() {
+    return this._dataMin - this.expandMin * (this._dataMax - this._dataMin);
+  }
+
+  get dataMax() {
+    return this._dataMax + this.expandMax * (this._dataMax - this._dataMin);
+  }
+
+  get dataRange() {
+    return this.dataMax - this.dataMin;
+  }
+
   get dataRepresentation() {
-    const { dataScale, zero, expandMin, expandMax } = this;
-    const min = zero ? 0 : dataScale.pctToUnits(0 - expandMin);
-    const max = dataScale.pctToUnits(1 + expandMax);
-
-    return [min, max];
+    return [this.dataMin, this.dataMax];
   }
 
-  get plotMin() {
-    return this.pctToPlot(0) as number;
-  }
+  setPlotLimits = (min: number, max: number) => {
+    this.plotMin = min;
+    this.plotMax = max;
+    return this;
+  };
 
-  get plotMax() {
-    return this.pctToPlot(1) as number;
-  }
+  registerData = (data: number[]) => {
+    const sorted = data.sort((a, b) => a - b);
+    this._dataMin = this.zero ? 0 : sorted[0];
+    this._dataMax = sorted[sorted.length - 1];
+    return this;
+  };
 
   expand = (min: number, max: number) => {
-    this.expandScale.min -= min;
-    this.expandScale.max += max;
     this.expandMin += min;
     this.expandMax += max;
     return this;
   };
 
-  setPlotLimits = (min: number, max: number) => {
-    this.plotScale.setLimits(min, max);
-    return this;
-  };
-
-  registerData = (data: number[]) => {
-    this.dataScale.setLimits(this.zero ? 0 : funs.min(data), funs.max(data));
-    return this;
-  };
-
   pctToPlot = (pct: number | number[]) => {
-    return this.plotScale.pctToUnits(pct);
+    const { plotMin, plotRange } = this;
+    if (Array.isArray(pct)) {
+      let [i, res] = [pct.length, Array(pct.length)];
+      while (i--) res[i] = plotMin + pct[i] * plotRange;
+      return res;
+    }
+    return plotMin + pct * plotRange;
   };
 
-  dataToPlot = (data: null | number | number[]) => {
-    const { dataScale, expandScale, plotScale } = this;
-    return plotScale.pctToUnits(
-      expandScale.unitsToPct(dataScale.unitsToPct(data))
-    );
+  dataToPlot = (data: number | number[] | sprs.SparseArray) => {
+    const { dataMin, dataRange, plotMin, plotRange } = this;
+    if (sprs.isArrayLike(data)) {
+      let [i, res] = [data.length, new sprs.SparseUint16Array(data)];
+      while (i--) {
+        if (res.empty[i]) continue;
+        res[i] = plotMin + ((data[i] - dataMin) / dataRange) * plotRange;
+      }
+      return res;
+    }
+    return plotMin + ((data - dataMin) / dataRange) * plotRange;
   };
 }

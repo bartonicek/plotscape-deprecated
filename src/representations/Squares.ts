@@ -1,4 +1,5 @@
 import * as dtstr from "../datastructures.js";
+import * as sprs from "../sparsearrays.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 import { Representation } from "./Representation.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
@@ -15,10 +16,9 @@ export class Squares extends Representation {
     let [x, y, size, fillHeight] = mappings.map((e) =>
       getMapping(e, membership)
     );
-    console.log({ size, fillHeight });
 
     if (!size.length) {
-      size = new dtstr.SparseFloat32Array(x.length).fill(
+      size = new sprs.SparseUint16Array(x.length).fill(
         defaultSize * sizeMultiplier
       );
       return [x, y, size, fillHeight];
@@ -37,14 +37,22 @@ export class Squares extends Representation {
     if (x.breakWidth && y.breakWidth) {
       return Math.min(x.breakWidth, y.breakWidth);
     }
-    return Math.abs(Math.min(x.plotScale.range, y.plotScale.range)) / 25;
+    return (
+      Math.abs(Math.min(x.plotRange, y.plotRange)) / this.wrangler.nObjects
+    );
   }
   drawBase = (context: GraphicLayer) => {
     let [x, y, size] = this.getMappings(1);
     if (!x) return;
     const pars = { ...this.getPars(1), alpha: this.alphaMultiplier };
-    const y0 = y.map((e, i) => e + size[i] / 2);
-    const y1 = y0.map((e, i) => e - size[i]);
+
+    let i = x.length;
+    const y0 = new sprs.SparseUint16Array(x.length);
+    const y1 = new sprs.SparseUint16Array(x.length);
+    while (i--) {
+      y0[i] = y[i] + size[i] / 2;
+      y1[i] = y[i] - size[i] / 2;
+    }
     context.drawBarsV(x, y0, y1, size, pars);
   };
   drawHighlight = (context: GraphicLayer) => {
@@ -53,11 +61,10 @@ export class Squares extends Representation {
       const [, , sizeBase, fillHeightBase] = this.getMappings(1);
       if (!x) return;
       const pars = { ...this.getPars(e), alpha: 1 };
-      let [i, y0, y1] = [
-        x.length,
-        new dtstr.SparseFloat32Array(x.length),
-        new dtstr.SparseFloat32Array(x.length),
-      ];
+
+      let i = x.length;
+      const y0 = new sprs.SparseUint16Array(x.length);
+      const y1 = new sprs.SparseUint16Array(x.length);
       while (i--) {
         const c = fillHeight[i] / fillHeightBase[i];
         y0[i] = y[i] + sizeBase[i] / 2;

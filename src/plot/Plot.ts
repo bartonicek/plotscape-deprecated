@@ -6,7 +6,6 @@ import * as auxs from "../auxiliaries/auxiliaries.js";
 import * as hndl from "../handlers/handlers.js";
 import { GraphicStack } from "./GraphicStack.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
-import { PlotScaleContinuous } from "../scales/scales.js";
 
 const layers = ["layerBase", "layerUser", "layerHighlight", "layerOverlay"];
 
@@ -105,17 +104,25 @@ export class Plot extends GraphicStack {
   };
 
   inSelection = (selPoints: dtstr.Rect2Points): number[] => {
-    const allPoints = Object.keys(this.representations).map((e) => {
-      return this.representations[e]?.inSelection?.(selPoints);
-    });
-    return Array.from(new Set(allPoints.flat()));
+    const repNames = Object.keys(this.representations);
+    let [i, allCases] = [repNames.length, new Set<number>()];
+    while (i--) {
+      const cases = this.representations[repNames[i]].inSelection(selPoints);
+      let j = cases.length;
+      while (j--) allCases.add(cases[j]);
+    }
+    return Array.from(allCases);
   };
 
   inClickPosition = (clickPoint: [number, number]): number[] => {
-    const allPoints = Object.keys(this.representations).map((e) => {
-      return this.representations[e]?.atClick?.(clickPoint);
-    });
-    return Array.from(new Set(allPoints.flat()));
+    const repNames = Object.keys(this.representations);
+    let [i, allCases] = [repNames.length, new Set<number>()];
+    while (i--) {
+      const cases = this.representations[repNames[i]].atClick(clickPoint);
+      let j = cases.length;
+      while (j--) allCases.add(cases[j]);
+    }
+    return Array.from(allCases);
   };
 
   updateCurrent = () => this.drawHighlight();
@@ -244,8 +251,8 @@ export class Plot extends GraphicStack {
     this.handlers.drag.state = this.handlers.state;
     this.resize();
 
-    if (scales.x.continuous) scales.x.expand(0.1, 0.1);
-    if (scales.y.continuous) scales.y.expand(0.1, 0.1);
+    if (scales.x.continuous) scales.x.expand(scales.x.zero ? 0 : 0.1, 0.1);
+    if (scales.y.continuous) scales.y.expand(scales.y.zero ? 0 : 0.1, 0.1);
 
     Object.keys(scales).forEach((e) => {
       scales[e].registerData?.(this.getUnique(e));
@@ -261,8 +268,5 @@ export class Plot extends GraphicStack {
     containerDiv.addEventListener("mousedown", mouseDownThisPlot);
 
     Object.keys(handlers).forEach((e) => handlers[e].subscribe(this));
-
-    this.drawBase();
-    this.drawOverlay();
   };
 }

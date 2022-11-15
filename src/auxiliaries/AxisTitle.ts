@@ -24,22 +24,22 @@ export class AxisTitle extends Auxiliary {
 
   draw = (context: GraphicLayer) => {
     if (this.label === "_indicator") return;
-    const { sizeHandler, scales, along, other } = this;
+    const { scales, along, other } = this;
+    const { margins, fontsize } = this.sizeHandler;
 
-    const size = Math.floor(sizeHandler.fontsize * 1.5);
+    const size = Math.floor(fontsize * 1.5);
     const dir = along === "x" ? -1 : 1;
-    const margin =
-      along === "x" ? sizeHandler.margins.bottom : sizeHandler.margins.left;
+    const margin = along === "x" ? margins.bottom : margins.left;
 
     const coords = { x: null, y: null };
     coords[along] = scales[along].pctToPlot(0.5);
-    coords[other] =
-      scales[other].plotMin - dir * (margin - 1.5 * sizeHandler.fontsize);
+    coords[other] = scales[other].plotMin - dir * (margin - 1.5 * fontsize);
 
     const rot = this.along === "x" ? 0 : 270;
 
     context.context.textAlign = "center";
     context.context.textBaseline = "middle";
+
     context.drawText([coords.x], [coords.y], [this.label], size, rot);
   };
 

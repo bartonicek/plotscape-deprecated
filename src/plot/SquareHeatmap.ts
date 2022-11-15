@@ -9,12 +9,13 @@ export class SquareHeatmap extends Plot {
   constructor(plotConfig: dtstr.PlotConfig) {
     const { data, mapping, globals } = plotConfig;
     if (!mapping.has("size")) mapping.set("size", "_indicator");
+    if (!mapping.has("fillHeight")) mapping.set("fillHeight", "_indicator");
     super(plotConfig);
 
     this.wranglers = {
       wrangler1: new Wrangler(data, mapping, globals.marker)
         .splitBy("x", "y")
-        .splitWhat("size")
+        .splitWhat("size", "fillHeight")
         .doAcross("by", funs.toPretty, 10)
         .doWithin("by", funs.unique)
         .doWithin("what", funs.sum)
@@ -25,6 +26,7 @@ export class SquareHeatmap extends Plot {
       x: new scls.PlotScaleContinuous(),
       y: new scls.PlotScaleContinuous(),
       size: new scls.AreaScaleContinuous(),
+      fillHeight: new scls.LengthScaleContinuous(),
     };
 
     this.representations = {

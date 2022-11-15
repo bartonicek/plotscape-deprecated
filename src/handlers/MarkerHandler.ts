@@ -17,13 +17,12 @@ export class MarkerHandler extends Handler {
 
   isOfMembership = (index: number, membership: dtstr.ValidMemberships) => {
     if (membership === 1) return true;
+
     const { current: curr, past } = this;
-    if (membership === 128) {
-      return curr[index] > 1 ? !!(curr[index] & 128) : !!(past[index] & 128);
-    }
-    return curr[index] > 1
-      ? curr[index] >= membership
-      : past[index] >= membership;
+    if (membership === 128 && curr[index] > 1) return !!(curr[index] & 128);
+    if (membership === 128) return !!(past[index] & 128);
+    if (curr[index] > 1) return curr[index] >= membership;
+    return past[index] >= membership;
   };
 
   updateCurrent = (at: number[], membership: dtstr.ValidMemberships) => {
@@ -40,7 +39,7 @@ export class MarkerHandler extends Handler {
 
   clearCurrent = (keepTransient = false) => {
     if (!keepTransient) this.past.discardTransient();
-    this.current = new MembershipArray([...this.past]);
+    this.current = new MembershipArray(this.past);
     this.publish("clearAll");
   };
 
@@ -52,17 +51,17 @@ export class MarkerHandler extends Handler {
 }
 
 class MembershipArray extends Uint8Array {
-  constructor(arg: number | number[]) {
-    super(arg as unknown as ArrayBufferLike);
+  constructor(arg: number | ArrayBufferLike) {
+    const buffer = typeof arg === "number" ? new ArrayBuffer(arg) : arg;
+    super(buffer);
     if (typeof arg === "number") this.fill(1);
   }
+
   clear = () => this.fill(1);
 
   discardTransient = () => {
     let i = this.length;
-    while (i--) {
-      this[i] = this[i] & ~128;
-    }
+    while (i--) this[i] = this[i] & ~128;
   };
 
   merge = (arr: MembershipArray) => {

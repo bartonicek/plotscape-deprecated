@@ -1,93 +1,97 @@
 import * as dtstr from "../datastructures.js";
 import * as funs from "../functions.js";
+import * as sprs from "../sparsearrays.js";
 import { MarkerHandler } from "../handlers/MarkerHandler.js";
+import { Wrangler } from "./Wrangler.js";
 
 export class Cast {
   data: dtstr.VectorGeneric;
   _transformedData: dtstr.VectorGeneric;
+  processedData: dtstr.VectorGeneric;
+  processedData2: sprs.SparseArray;
   marker: MarkerHandler;
-  memoCache: Map<string, number>;
 
+  indices: Uint32Array;
   nObjects: number;
-  indices: number[];
+  emptyObjects: Uint8Array;
+
   allUnique: boolean;
-  withinFun: Function;
-  withinArgs: any[];
-  acrossFun: Function;
-  acrossArgs: any[];
+  acrossFun: (data: any[]) => any[];
+  withinFun: (data: any[]) => any | any[];
 
-  constructor(data: dtstr.VectorGeneric) {
-    this.data = data;
-    this.marker = null;
-    this.indices = null;
-    this.allUnique = false;
+  constructor(wrangler: Wrangler, mapping: dtstr.ValidMappings) {
+    this.data = wrangler.getVariable(mapping);
+    this.marker = wrangler.marker;
+    this.indices = wrangler.indices;
+    this.allUnique = wrangler.allUnique;
+    this.nObjects = wrangler.nObjects;
+    this.emptyObjects = wrangler.emptyObjects;
 
-    this.memoCache = new Map();
+    this.processedData = Array(this.nObjects);
+    this.processedData2 = new sprs.SparseArray(this.nObjects);
 
     this.acrossFun = funs.identity;
-    this.acrossArgs = [];
-
     this.withinFun = funs.identity;
-    this.withinArgs = [];
   }
 
   get transformedData() {
     if (!this._transformedData) {
-      this._transformedData = this.acrossFun(this.data, ...this.acrossArgs);
+      this._transformedData = this.acrossFun(this.data);
     }
     return this._transformedData;
   }
 
   extract = (membership?: dtstr.ValidMemberships) => {
-    const { marker, memoCache, withinFun, withinArgs, transformedData } = this;
+    const { marker, indices, nObjects, withinFun } = this;
+    // this.emptyObjects.fill(0);
+    // this.processedData.fill(0);
+
+    this.processedData.fill(null);
+    this.processedData2.empty.fill(0);
+
+    let i = nObjects;
 
     if (this.allUnique) {
-      if (!membership) return transformedData;
-      return transformedData.filter((_, i) =>
-        marker.isOfMembership(i, membership)
-      );
-    }
-
-    let [i, j, subArr, res] = [
-      this.indices.length,
-      this.nObjects,
-      Array.from(Array(this.nObjects), (e) => []),
-      Array(this.nObjects).fill(null),
-    ];
-
-    while (i--) {
-      if (!membership || marker.isOfMembership(i, membership)) {
-        subArr[this.indices[i]].push(this.transformedData[i]);
+      if (!membership) {
+        while (i--) this.processedData2[i] = this.transformedData[i];
+        return this.processedData2;
       }
-    }
-
-    while (j--) {
-      if (subArr[j].length) {
-        const arrString = funs.tabulateAndStringify(subArr[j]);
-        if (memoCache.has(arrString)) {
-          res[j] = memoCache.get(arrString);
+      while (i--) {
+        if (!marker.isOfMembership(i, membership)) {
+          this.processedData2.empty[i] = 1;
           continue;
         }
-        const temp = withinFun(subArr[j], ...withinArgs);
-        res[j] = temp;
-        memoCache.set(arrString, temp);
+        this.processedData2[i] = this.transformedData[i];
+      }
+      return this.processedData2;
+    }
+
+    let [j, subArrs] = [indices.length, Array.from(Array(nObjects), (e) => [])];
+    while (j--) {
+      if (!membership || marker.isOfMembership(j, membership)) {
+        subArrs[this.indices[j]].push(this.transformedData[j]);
+      }
+    }
+
+    while (i--) {
+      if (subArrs[i].length) {
+        this.processedData2[i] = withinFun(subArrs[i]);
         continue;
       }
-      res[j] = null;
+      this.processedData2.empty[i] = 1;
     }
-    return res;
+    return this.processedData2;
   };
 
-  registerAcross = (fun: Function, ...args: any[]) => {
+  registerAcross = (fun: (data: any[]) => any[]) => {
+    if (!fun) return;
     this.acrossFun = fun;
-    this.acrossArgs = args;
-    this._transformedData = this.acrossFun(this.data, ...this.acrossArgs);
     return this;
   };
 
-  registerWithin = (fun: Function, ...args: any[]) => {
+  registerWithin = (fun: (data: any[]) => string | number | boolean) => {
+    if (!fun) return;
     this.withinFun = fun;
-    this.withinArgs = args;
     return this;
   };
 }

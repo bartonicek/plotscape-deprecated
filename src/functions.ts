@@ -318,7 +318,7 @@ const uniqueRows = (data: dtstr.VectorGeneric[][]) => {
   return { values, indices };
 };
 
-const uniqueRowIds = (data: dtstr.VectorGeneric[][]) => {
+const uniqueRowIds = (data: dtstr.VectorGeneric[]) => {
   // Transpose dataframe from array of cols to array of rows & turn the rows into strings
   const stringRows = data[0].map((_, i) =>
     JSON.stringify(data.map((row) => row[i]))

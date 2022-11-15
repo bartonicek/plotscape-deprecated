@@ -403,12 +403,13 @@ var PLOTSCAPE = (() => {
                     if (membership === 1)
                         return true;
                     const { current: curr, past } = this;
-                    if (membership === 128) {
-                        return curr[index] > 1 ? !!(curr[index] & 128) : !!(past[index] & 128);
-                    }
-                    return curr[index] > 1
-                        ? curr[index] >= membership
-                        : past[index] >= membership;
+                    if (membership === 128 && curr[index] > 1)
+                        return !!(curr[index] & 128);
+                    if (membership === 128)
+                        return !!(past[index] & 128);
+                    if (curr[index] > 1)
+                        return curr[index] >= membership;
+                    return past[index] >= membership;
                 };
                 this.updateCurrent = (at, membership) => {
                     if (membership < 128 && at.length)
@@ -425,7 +426,7 @@ var PLOTSCAPE = (() => {
                 this.clearCurrent = (keepTransient = false) => {
                     if (!keepTransient)
                         this.past.discardTransient();
-                    this.current = new MembershipArray([...this.past]);
+                    this.current = new MembershipArray(this.past);
                     this.publish("clearAll");
                 };
                 this.clearAll = () => {
@@ -442,13 +443,13 @@ var PLOTSCAPE = (() => {
         exports.MarkerHandler = MarkerHandler;
         class MembershipArray extends Uint8Array {
             constructor(arg) {
-                super(arg);
+                const buffer = typeof arg === "number" ? new ArrayBuffer(arg) : arg;
+                super(buffer);
                 this.clear = () => this.fill(1);
                 this.discardTransient = () => {
                     let i = this.length;
-                    while (i--) {
+                    while (i--)
                         this[i] = this[i] & ~128;
-                    }
                 };
                 this.merge = (arr) => {
                     let i = this.length;
@@ -676,6 +677,9 @@ var PLOTSCAPE = (() => {
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.globalParameters = void 0;
         exports.globalParameters = {
+            scene: {
+                backgroundColour: `#deded9`,
+            },
             plot: {
                 scaleExpandFactor: 0.1,
                 backgroundColour: `#F7F7F2`,
@@ -684,11 +688,63 @@ var PLOTSCAPE = (() => {
             reps: {
                 colour: [`#cccccc`, `#7fc97f`, `#fdc086`, `#beaed4`, `#386cb0`],
                 strokeColour: [null, `#7fc97f`, `#fdc086`, `#beaed4`, `#386cb0`],
-                strokeWidth: [null, 1, 1, 1, 1],
+                strokeWidth: [null, null, null, null, 1],
                 radius: [1, 1, 1, 1, 1],
                 alpha: [1, 1, 1, 1, 1],
             },
         };
+    });
+    define("sparsearrays", ["require", "exports"], function (require, exports) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.SparseUint16Array = exports.SparseFloat32Array = exports.SparseArray = exports.isArrayLike = void 0;
+        const isArrayLike = (arg) => {
+            return Array.isArray(arg) || ArrayBuffer.isView(arg);
+        };
+        exports.isArrayLike = isArrayLike;
+        class SparseArray extends Array {
+            constructor(arg) {
+                if (isArrayLike(arg)) {
+                    super(arg.length);
+                    let i = arg.length;
+                    while (i--)
+                        this[i] = arg[i];
+                    this.empty = new Uint8Array(arg.length);
+                    return this;
+                }
+                super(arg);
+                this.empty = new Uint8Array(arg);
+            }
+        }
+        exports.SparseArray = SparseArray;
+        class SparseFloat32Array extends Float32Array {
+            constructor(arg) {
+                if (isArrayLike(arg)) {
+                    super(arg);
+                    this.empty = new Uint8Array(arg.length);
+                    if ("empty" in arg)
+                        this.empty.set(arg.empty);
+                    return this;
+                }
+                super(arg);
+                this.empty = new Uint8Array(arg);
+            }
+        }
+        exports.SparseFloat32Array = SparseFloat32Array;
+        class SparseUint16Array extends Uint16Array {
+            constructor(arg) {
+                if (isArrayLike(arg)) {
+                    super(arg);
+                    this.empty = new Uint8Array(arg.length);
+                    if ("empty" in arg)
+                        this.empty.set(arg.empty);
+                    return this;
+                }
+                super(arg);
+                this.empty = new Uint8Array(arg);
+            }
+        }
+        exports.SparseUint16Array = SparseUint16Array;
     });
     define("plot/GraphicLayer", ["require", "exports", "globalparameters"], function (require, exports, globalparameters_js_1) {
         "use strict";
@@ -702,14 +758,6 @@ var PLOTSCAPE = (() => {
                     this.canvas.width = Math.ceil(this.width * this.scaleFactor);
                     this.canvas.height = Math.ceil(this.height * this.scaleFactor);
                     this.context.scale(this.scaleFactor, this.scaleFactor);
-                };
-                this.anyMissing = (i, ...arrs) => {
-                    let j = arrs.length;
-                    while (j--) {
-                        if (arrs[j].missing.has(i))
-                            return true;
-                    }
-                    return false;
                 };
                 this.toAlpha = (col, alpha) => {
                     if (alpha === 1)
@@ -737,14 +785,13 @@ var PLOTSCAPE = (() => {
                 this.drawBarsV = (x, y0, y1, width, pars = this.defaultPars) => {
                     const { colour, strokeColour, strokeWidth, alpha } = pars;
                     const [context, w] = [this.context, width];
-                    const missing = new Set([x, y0, y1, width].map((e) => [...e.missing]).flat());
                     context.save();
                     context.fillStyle = this.toAlpha(colour, alpha);
                     context.strokeStyle = strokeColour;
                     context.lineWidth = strokeWidth;
                     let i = x.length;
                     while (i--) {
-                        if (missing.has(i))
+                        if (x.empty[i] || y0.empty[i] || y1.empty[i] || width.empty[i])
                             continue;
                         if (colour)
                             context.fillRect(x[i] - w[i] / 2, y1[i], w[i], y0[i] - y1[i]);
@@ -753,17 +800,16 @@ var PLOTSCAPE = (() => {
                     }
                     context.restore();
                 };
-                this.drawPoints = (x, y, radius, pars = this.defaultPars) => {
+                this.drawPoints = (x, y, radius, pars = this.defaultPars, empty) => {
                     const context = this.context;
                     const { colour, strokeColour, strokeWidth, alpha } = pars;
-                    const missing = new Set([x, y, radius].map((e) => [...e.missing]).flat());
                     context.save();
                     context.fillStyle = this.toAlpha(colour, alpha);
                     context.strokeStyle = strokeColour;
                     context.lineWidth = strokeWidth;
                     let i = x.length;
                     while (i--) {
-                        if (missing.has(i))
+                        if (x.empty[i] || y.empty[i] || radius.empty[i])
                             continue;
                         context.beginPath();
                         context.arc(x[i], y[i], radius[i], 0, Math.PI * 2);
@@ -777,15 +823,13 @@ var PLOTSCAPE = (() => {
                 this.drawRectsHW = (x, y, h, w, pars = this.defaultPars) => {
                     const context = this.context;
                     const { colour, strokeColour, strokeWidth, alpha } = pars;
-                    const missing = new Set([x, y, h, w].map((e) => [...e.missing]).flat());
                     context.save();
                     context.fillStyle = this.toAlpha(colour, alpha);
                     context.strokeStyle = strokeColour;
                     context.lineWidth = strokeWidth;
                     let i = x.length;
                     while (i--) {
-                        if (missing.has(i))
-                            continue;
+                        // if (empty[i]) continue;
                         if (colour)
                             context.fillRect(x[i] - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
                         if (strokeColour)
@@ -837,7 +881,7 @@ var PLOTSCAPE = (() => {
                     }
                     context.restore();
                 };
-                this.drawDim = (col = "rgba(120, 120, 120, 0.1)") => {
+                this.drawDim = (col = "rgba(120, 120, 120, 0.05)") => {
                     const context = this.context;
                     context.fillStyle = col;
                     context.fillRect(0, 0, this.width, this.height);
@@ -874,70 +918,75 @@ var PLOTSCAPE = (() => {
         }
         exports.GraphicLayer = GraphicLayer;
     });
-    define("wrangler/Cast", ["require", "exports", "functions"], function (require, exports, funs) {
+    define("wrangler/Cast", ["require", "exports", "functions", "sparsearrays"], function (require, exports, funs, sprs) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.Cast = void 0;
         class Cast {
-            constructor(data) {
+            constructor(wrangler, mapping) {
                 this.extract = (membership) => {
-                    const { marker, memoCache, withinFun, withinArgs, transformedData } = this;
+                    const { marker, indices, nObjects, withinFun } = this;
+                    // this.emptyObjects.fill(0);
+                    // this.processedData.fill(0);
+                    this.processedData.fill(null);
+                    this.processedData2.empty.fill(0);
+                    let i = nObjects;
                     if (this.allUnique) {
-                        if (!membership)
-                            return transformedData;
-                        return transformedData.filter((_, i) => marker.isOfMembership(i, membership));
-                    }
-                    let [i, j, subArr, res] = [
-                        this.indices.length,
-                        this.nObjects,
-                        Array.from(Array(this.nObjects), (e) => []),
-                        Array(this.nObjects).fill(null),
-                    ];
-                    while (i--) {
-                        if (!membership || marker.isOfMembership(i, membership)) {
-                            subArr[this.indices[i]].push(this.transformedData[i]);
+                        if (!membership) {
+                            while (i--)
+                                this.processedData2[i] = this.transformedData[i];
+                            return this.processedData2;
                         }
-                    }
-                    while (j--) {
-                        if (subArr[j].length) {
-                            const arrString = funs.tabulateAndStringify(subArr[j]);
-                            if (memoCache.has(arrString)) {
-                                res[j] = memoCache.get(arrString);
+                        while (i--) {
+                            if (!marker.isOfMembership(i, membership)) {
+                                this.processedData2.empty[i] = 1;
                                 continue;
                             }
-                            const temp = withinFun(subArr[j], ...withinArgs);
-                            res[j] = temp;
-                            memoCache.set(arrString, temp);
+                            this.processedData2[i] = this.transformedData[i];
+                        }
+                        return this.processedData2;
+                    }
+                    let [j, subArrs] = [indices.length, Array.from(Array(nObjects), (e) => [])];
+                    while (j--) {
+                        if (!membership || marker.isOfMembership(j, membership)) {
+                            subArrs[this.indices[j]].push(this.transformedData[j]);
+                        }
+                    }
+                    while (i--) {
+                        if (subArrs[i].length) {
+                            this.processedData2[i] = withinFun(subArrs[i]);
                             continue;
                         }
-                        res[j] = null;
+                        this.processedData2.empty[i] = 1;
                     }
-                    return res;
+                    return this.processedData2;
                 };
-                this.registerAcross = (fun, ...args) => {
+                this.registerAcross = (fun) => {
+                    if (!fun)
+                        return;
                     this.acrossFun = fun;
-                    this.acrossArgs = args;
-                    this._transformedData = this.acrossFun(this.data, ...this.acrossArgs);
                     return this;
                 };
-                this.registerWithin = (fun, ...args) => {
+                this.registerWithin = (fun) => {
+                    if (!fun)
+                        return;
                     this.withinFun = fun;
-                    this.withinArgs = args;
                     return this;
                 };
-                this.data = data;
-                this.marker = null;
-                this.indices = null;
-                this.allUnique = false;
-                this.memoCache = new Map();
+                this.data = wrangler.getVariable(mapping);
+                this.marker = wrangler.marker;
+                this.indices = wrangler.indices;
+                this.allUnique = wrangler.allUnique;
+                this.nObjects = wrangler.nObjects;
+                this.emptyObjects = wrangler.emptyObjects;
+                this.processedData = Array(this.nObjects);
+                this.processedData2 = new sprs.SparseArray(this.nObjects);
                 this.acrossFun = funs.identity;
-                this.acrossArgs = [];
                 this.withinFun = funs.identity;
-                this.withinArgs = [];
             }
             get transformedData() {
                 if (!this._transformedData) {
-                    this._transformedData = this.acrossFun(this.data, ...this.acrossArgs);
+                    this._transformedData = this.acrossFun(this.data);
                 }
                 return this._transformedData;
             }
@@ -954,68 +1003,67 @@ var PLOTSCAPE = (() => {
                     return this.data[this.mapping.get(mapping)];
                 };
                 this.extractAsIs = (...mappings) => {
-                    this.indices = Array.from(Array(this.marker.n), (e, i) => i);
+                    this.allUnique = true;
+                    this.indices = new Uint32Array(Array.from(Array(this.marker.n).keys()));
+                    this.nObjects = this.indices.length;
+                    this.emptyObjects = new Uint8Array(this.nObjects);
                     mappings.forEach((mapping) => {
-                        this[mapping] = new Cast_js_1.Cast(this.getVariable(mapping));
-                        this[mapping].marker = this.marker;
-                        this[mapping].allUnique = true;
+                        this[mapping] = new Cast_js_1.Cast(this, mapping);
                     });
                     return this;
                 };
                 this.splitBy = (...mappings) => {
-                    mappings.forEach((mapping, i) => {
-                        this.by.add(mapping);
-                        this[mapping] = new Cast_js_1.Cast(this.getVariable(mapping));
-                        this[mapping].marker = this.marker;
-                    });
+                    mappings.forEach((mapping, i) => this.by.add(mapping));
                     return this;
                 };
                 this.splitWhat = (...mappings) => {
-                    mappings.forEach((mapping) => {
-                        this.what.add(mapping);
-                        this[mapping] = new Cast_js_1.Cast(this.getVariable(mapping));
-                        this[mapping].marker = this.marker;
-                    });
+                    mappings.forEach((mapping) => this.what.add(mapping));
                     return this;
                 };
                 this.doAcross = (target, fun, ...args) => {
-                    if (target === "by" || target === "what") {
-                        Array.from(this[target]).forEach((mapping) => {
-                            this[mapping].registerAcross(fun, ...args);
-                        });
-                        return this;
-                    }
-                    this[target].registerAcross(fun, ...args);
+                    const funWithArgs = (x) => fun(x, ...args);
+                    this.acrossFuns.set(target, funWithArgs);
                     return this;
                 };
                 this.doWithin = (target, fun, ...args) => {
-                    if (target === "by" || target === "what") {
-                        Array.from(this[target]).forEach((mapping) => {
-                            this[mapping].registerWithin(fun, ...args);
-                        });
-                        return this;
-                    }
-                    this[target].registerWithin(fun, ...args);
+                    const funWithArgs = (x) => fun(x, ...args);
+                    this.withinFuns.set(target, funWithArgs);
                     return this;
                 };
                 this.assignIndices = () => {
-                    const { what, by } = this;
-                    const splittingVars = Array.from(by).map((e) => this[e].transformedData);
-                    this.indices = funs.uniqueRowIds(splittingVars);
-                    this.nObjects = Array.from(new Set([...this.indices])).length;
-                    Array.from([...by, ...what]).map((e) => {
-                        this[e].indices = this.indices;
-                        this[e].nObjects = this.nObjects;
+                    const { what, by, acrossFuns, withinFuns, acrossArgs, withinArgs } = this;
+                    const splittingVars = Array.from(by).map((e) => {
+                        if (acrossFuns.get("by")) {
+                            return acrossFuns.get("by")(this.getVariable(e));
+                        }
+                        return this.getVariable(e);
+                    });
+                    const indices = funs.uniqueRowIds(splittingVars);
+                    const nObjects = Array.from(new Set(indices)).length;
+                    this.indices = new Uint32Array(indices);
+                    this.nObjects = nObjects;
+                    this.emptyObjects = new Uint8Array(this.nObjects);
+                    [...what].forEach((e) => {
+                        this[e] = new Cast_js_1.Cast(this, e);
+                        this[e].registerAcross(acrossFuns.get("what"));
+                        this[e].registerWithin(withinFuns.get("what"));
+                    });
+                    [...by].forEach((e) => {
+                        this[e] = new Cast_js_1.Cast(this, e);
+                        this[e].registerAcross(acrossFuns.get("by"));
+                        this[e].registerWithin(withinFuns.get("by"));
                     });
                     return this;
                 };
                 this.n = data[Object.keys(data)[0]].length;
+                this.allUnique = false;
                 this.data = data;
                 this.mapping = mapping;
                 this.marker = marker;
-                this.indices = [];
                 this.by = new Set();
                 this.what = new Set();
+                this.acrossFuns = new Map();
+                this.withinFuns = new Map();
             }
         }
         exports.Wrangler = Wrangler;
@@ -1028,21 +1076,25 @@ var PLOTSCAPE = (() => {
             constructor(wrangler) {
                 this.getMapping = (mapping, membership) => {
                     var _a;
-                    let res = (_a = this.wrangler[mapping]) === null || _a === void 0 ? void 0 : _a.extract(membership);
+                    const { wrangler, scales } = this;
+                    const res = (_a = wrangler[mapping]) === null || _a === void 0 ? void 0 : _a.extract(membership, wrangler.emptyObjects);
                     if (!res)
                         return [];
-                    return this.scales[mapping].dataToPlot(res);
+                    const coords = scales[mapping].dataToPlot(res, wrangler.emptyObjects);
+                    return coords;
                 };
                 this.getPars = (membership) => {
                     if (membership === 128 && this.wrangler.marker.anyPersistent) {
-                        return Object.assign(Object.assign({}, this.pars[this.pars.length - 1]), { colour: this.pattern });
+                        let pars = this.pars[this.pars.length - 1];
+                        pars = Object.assign(Object.assign({}, pars), { colour: `${pars.colour}66` });
+                        return pars;
                     }
                     if (membership === 128)
                         return this.pars[this.pars.length - 1];
                     return this.pars[(membership & ~128) - 1];
                 };
                 this.drawBase = (context) => { };
-                this.drawHighlight = (context, selectedPoints) => { };
+                this.drawHighlight = (context) => { };
                 this.registerScales = (scales) => {
                     this.scales = scales;
                     return this;
@@ -1051,27 +1103,41 @@ var PLOTSCAPE = (() => {
                     this.alphaMultiplier = 1;
                     this.sizeMultiplier = 1;
                 };
-                // Checks which bounding rects overlap with a rectangular selection region
-                //E.g. [[0, 0], [Width, Height]] should include all bound. rects
                 this.inSelection = (selectionRect) => {
-                    const { wrangler, boundingRects } = this;
-                    const selectedReps = boundingRects.map((rect) => {
-                        return funs.rectOverlap(selectionRect, rect);
-                    });
-                    const selectedDatapoints = wrangler.indices.flatMap((e, i) => {
-                        return selectedReps[e] ? i : [];
-                    });
-                    return selectedDatapoints;
+                    const { wrangler, boundingRects, selectedCases } = this;
+                    let [i, k] = [boundingRects.length, wrangler.n];
+                    while (i--) {
+                        // If the ith representation is selected...
+                        if (funs.rectOverlap(selectionRect, boundingRects[i])) {
+                            // ...append all case indices that correspond to it
+                            // to the list of the selected cases, starting from the end
+                            let j = wrangler.n;
+                            while (j--) {
+                                if (wrangler.indices[j] === i)
+                                    selectedCases[--k] = j;
+                            }
+                        }
+                    }
+                    // Return only the selected indices
+                    return selectedCases.slice(k, wrangler.n);
                 };
                 this.atClick = (clickPoint) => {
-                    const { wrangler, boundingRects } = this;
-                    const selectedReps = boundingRects.map((rect) => {
-                        return funs.pointInRect(clickPoint, rect);
-                    });
-                    const selectedDatapoints = wrangler.indices.flatMap((e, i) => {
-                        return selectedReps[e] ? i : [];
-                    });
-                    return selectedDatapoints;
+                    const { wrangler, selectedCases, boundingRects } = this;
+                    let [i, k] = [boundingRects.length, wrangler.n];
+                    while (i--) {
+                        // If the ith representation is clicked...
+                        if (funs.pointInRect(clickPoint, boundingRects[i])) {
+                            // ...add all case indices that correspond to it
+                            // to the list of selected cases, starting from the end
+                            let j = wrangler.n;
+                            while (j--) {
+                                if (wrangler.indices[j] === i)
+                                    selectedCases[--k] = j;
+                            }
+                        }
+                    }
+                    // Return only the selected indices
+                    return selectedCases.slice(k, wrangler.n);
                 };
                 // Handle generic keypress actions
                 this.keyPressed = (key) => {
@@ -1091,44 +1157,25 @@ var PLOTSCAPE = (() => {
                         this.alphaMultiplier = funs.gatedMultiply(alphaMultiplier, 1.2, alphaLimits);
                 };
                 this.wrangler = wrangler;
+                this.selectedCases = new Array(wrangler.n);
+                const p = globalparameters_js_2.globalParameters.reps;
                 this.pars = dtstr.validMembershipArray.map((e) => {
-                    const p = globalparameters_js_2.globalParameters.reps;
                     if (e === 128)
                         return funs.accessIndexed(p, p.colour.length - 1);
                     return funs.accessIndexed(p, (e & ~128) - 1);
                 });
-                this.pattern = funs.createStripePattern(this.pars[this.pars.length - 1].colour, 10);
                 this.sizeMultiplier = 1;
                 this.alphaMultiplier = 1;
-                this.sizeLimits = {
-                    min: 1 / 5,
-                    max: 5,
-                };
-                this.alphaLimits = {
-                    min: 0.01,
-                    max: 1,
-                };
+                this.sizeLimits = { min: 0.2, max: 5 };
+                this.alphaLimits = { min: 0.01, max: 1 };
             }
-            // getMappings2 = (
-            //   membership: dtstr.ValidMemberships,
-            //   ...mappings: dtstr.ValidMappings[]
-            // ) => {
-            //   const { scales, wrangler } = this;
-            //   let [i, res] = [mappings.length, Array(mappings.length)];
-            //   while (i--) {
-            //     const mapping = wrangler[mappings[i]];
-            //     res[i] = scales[mapping].dataToPlot(
-            //       wrangler[mappings[i]]?.extract(membership)
-            //     );
-            //   }
-            // };
             get boundingRects() {
                 return [];
             }
         }
         exports.Representation = Representation;
     });
-    define("representations/Bars", ["require", "exports", "datastructures", "representations/Representation"], function (require, exports, dtstr, Representation_js_1) {
+    define("representations/Bars", ["require", "exports", "datastructures", "sparsearrays", "representations/Representation"], function (require, exports, dtstr, sprs, Representation_js_1) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.Bars = void 0;
@@ -1141,24 +1188,25 @@ var PLOTSCAPE = (() => {
                 };
                 this.getMappings = (membership) => {
                     const mappings = ["x", "y"];
-                    return mappings.map((e) => this.getMapping(e, membership));
+                    const res = mappings.map((e) => this.getMapping(e, membership));
+                    return [...res, this.wrangler.emptyObjects];
                 };
                 this.drawBase = (context) => {
-                    const [x, y] = this.getMappings();
-                    const { y0Scalar, widthScalar, alphaMultiplier } = this;
-                    const y0 = new dtstr.SparseFloat32Array(x.length).fill(y0Scalar);
-                    const width = new dtstr.SparseFloat32Array(x.length).fill(widthScalar);
+                    const { y0Default, widthDefault, alphaMultiplier } = this;
+                    const [x, y] = this.getMappings(1);
+                    const y0 = new sprs.SparseUint16Array(x.length).fill(y0Default);
+                    const width = new sprs.SparseUint16Array(x.length).fill(widthDefault);
                     const pars = Object.assign(Object.assign({}, this.getPars(1)), { alpha: alphaMultiplier });
                     context.drawBarsV(x, y0, y, width, pars);
                 };
                 this.drawHighlight = (context) => {
                     dtstr.highlightMembershipArray.forEach((e) => {
+                        const { y0Default, widthDefault } = this;
                         const [x, y] = this.getMappings(e);
                         if (!(x.length > 0))
                             return;
-                        const { y0Scalar, widthScalar } = this;
-                        const y0 = new dtstr.SparseFloat32Array(x.length).fill(y0Scalar);
-                        const width = new dtstr.SparseFloat32Array(x.length).fill(widthScalar);
+                        const y0 = new sprs.SparseUint16Array(x.length).fill(y0Default);
+                        const width = new sprs.SparseUint16Array(x.length).fill(widthDefault);
                         const pars = Object.assign(Object.assign({}, this.getPars(e)), { alpha: 1 });
                         context.drawBarsV(x, y0, y, width, pars);
                     });
@@ -1167,21 +1215,24 @@ var PLOTSCAPE = (() => {
                 this.sizeMultiplier = widthMultiplier;
                 this.sizeLimits = { min: 0.01, max: 1 };
             }
-            get y0Scalar() {
+            get y0Default() {
                 return this.scales.y.plotMin;
             }
-            get widthScalar() {
+            get widthDefault() {
+                if (!this.scales.x.continuous) {
+                    return this.scales.x.breakWidth * this.sizeMultiplier;
+                }
                 const x = this.getMapping("x").sort((a, b) => a - b);
-                return this.sizeMultiplier * (x[1] - x[0]);
+                return Math.floor(this.sizeMultiplier * (x[1] - x[0]));
             }
             get boundingRects() {
-                const [x, y] = this.getMappings();
-                const [wh, y0] = [this.widthScalar / 2, this.y0Scalar];
+                const [x, y] = this.getMappings(1);
+                const [wd, y0d] = [this.widthDefault / 2, this.y0Default];
                 let [i, res] = [x.length, Array(x.length)];
                 while (i--) {
                     res[i] = [
-                        [x[i] - wh, y0],
-                        [x[i] + wh, y[i]],
+                        [x[i] - wd, y0d],
+                        [x[i] + wd, y[i]],
                     ];
                 }
                 return res;
@@ -1189,7 +1240,7 @@ var PLOTSCAPE = (() => {
         }
         exports.Bars = Bars;
     });
-    define("representations/Points", ["require", "exports", "datastructures", "representations/Representation"], function (require, exports, dtstr, Representation_js_2) {
+    define("representations/Points", ["require", "exports", "datastructures", "sparsearrays", "representations/Representation"], function (require, exports, dtstr, sprs, Representation_js_2) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.Points = void 0;
@@ -1201,8 +1252,8 @@ var PLOTSCAPE = (() => {
                     const mappings = ["x", "y", "size"];
                     let [x, y, size] = mappings.map((e) => getMapping(e, membership));
                     const radius = getPars(membership).radius;
-                    if (!size.length) {
-                        size = new dtstr.SparseFloat32Array(x.length).fill(radius * defaultRadius * sizeMultiplier);
+                    if (!this.hasSize) {
+                        size = new sprs.SparseUint16Array(x.length).fill(radius * defaultRadius * sizeMultiplier);
                         return [x, y, size];
                     }
                     size = size.map((e) => e * radius * defaultRadius * sizeMultiplier);
@@ -1211,7 +1262,7 @@ var PLOTSCAPE = (() => {
                 this.drawBase = (context) => {
                     const [x, y, size] = this.getMappings(1);
                     const pars = Object.assign(Object.assign({}, this.getPars(1)), { alpha: this.alphaMultiplier });
-                    context.drawPoints(x, y, size, pars);
+                    context.drawPoints(x, y, size, pars, this.wrangler.emptyObjects);
                 };
                 this.drawHighlight = (context) => {
                     dtstr.highlightMembershipArray.forEach((e) => {
@@ -1219,16 +1270,17 @@ var PLOTSCAPE = (() => {
                         if (!(x.length > 0))
                             return;
                         const pars = Object.assign(Object.assign({}, this.getPars(e)), { alpha: 1 });
-                        context.drawPoints(x, y, size, pars);
+                        context.drawPoints(x, y, size, pars, this.wrangler.emptyObjects);
                     });
                 };
+                this.hasSize = !!wrangler.mapping.get("size");
             }
             get defaultRadius() {
                 const { x, y } = this.scales;
-                if (x.breakWidth && y.breakWidth) {
-                    return Math.min(x.breakWidth, y.breakWidth) / 2;
+                if (!x.continuous && !y.continuous) {
+                    return Math.min(x.breakWidth, y.breakWidth) / Math.sqrt(Math.PI);
                 }
-                const length = Math.min(...[x, y].map((e) => Math.abs(e.plotScale.range)));
+                const length = Math.min(...[x, y].map((e) => Math.abs(e.plotRange)));
                 const c = 10 * Math.log(this.wrangler.n);
                 return length / c;
             }
@@ -1247,7 +1299,7 @@ var PLOTSCAPE = (() => {
         }
         exports.Points = Points;
     });
-    define("representations/Squares", ["require", "exports", "datastructures", "representations/Representation"], function (require, exports, dtstr, Representation_js_3) {
+    define("representations/Squares", ["require", "exports", "datastructures", "sparsearrays", "representations/Representation"], function (require, exports, dtstr, sprs, Representation_js_3) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.Squares = void 0;
@@ -1258,9 +1310,8 @@ var PLOTSCAPE = (() => {
                     const { getMapping, defaultSize, sizeMultiplier } = this;
                     const mappings = ["x", "y", "size", "fillHeight"];
                     let [x, y, size, fillHeight] = mappings.map((e) => getMapping(e, membership));
-                    console.log({ size, fillHeight });
                     if (!size.length) {
-                        size = new dtstr.SparseFloat32Array(x.length).fill(defaultSize * sizeMultiplier);
+                        size = new sprs.SparseUint16Array(x.length).fill(defaultSize * sizeMultiplier);
                         return [x, y, size, fillHeight];
                     }
                     let i = size.length;
@@ -1275,8 +1326,13 @@ var PLOTSCAPE = (() => {
                     if (!x)
                         return;
                     const pars = Object.assign(Object.assign({}, this.getPars(1)), { alpha: this.alphaMultiplier });
-                    const y0 = y.map((e, i) => e + size[i] / 2);
-                    const y1 = y0.map((e, i) => e - size[i]);
+                    let i = x.length;
+                    const y0 = new sprs.SparseUint16Array(x.length);
+                    const y1 = new sprs.SparseUint16Array(x.length);
+                    while (i--) {
+                        y0[i] = y[i] + size[i] / 2;
+                        y1[i] = y[i] - size[i] / 2;
+                    }
                     context.drawBarsV(x, y0, y1, size, pars);
                 };
                 this.drawHighlight = (context) => {
@@ -1286,11 +1342,9 @@ var PLOTSCAPE = (() => {
                         if (!x)
                             return;
                         const pars = Object.assign(Object.assign({}, this.getPars(e)), { alpha: 1 });
-                        let [i, y0, y1] = [
-                            x.length,
-                            new dtstr.SparseFloat32Array(x.length),
-                            new dtstr.SparseFloat32Array(x.length),
-                        ];
+                        let i = x.length;
+                        const y0 = new sprs.SparseUint16Array(x.length);
+                        const y1 = new sprs.SparseUint16Array(x.length);
                         while (i--) {
                             const c = fillHeight[i] / fillHeightBase[i];
                             y0[i] = y[i] + sizeBase[i] / 2;
@@ -1306,7 +1360,7 @@ var PLOTSCAPE = (() => {
                 if (x.breakWidth && y.breakWidth) {
                     return Math.min(x.breakWidth, y.breakWidth);
                 }
-                return Math.abs(Math.min(x.plotScale.range, y.plotScale.range)) / 25;
+                return (Math.abs(Math.min(x.plotRange, y.plotRange)) / this.wrangler.nObjects);
             }
             get boundingRects() {
                 const [x, y, size] = this.getMappings();
@@ -1330,254 +1384,246 @@ var PLOTSCAPE = (() => {
         __exportStar(Points_js_1, exports);
         __exportStar(Squares_js_1, exports);
     });
-    define("scales/ScaleContinuous", ["require", "exports", "datastructures"], function (require, exports, dtstr) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.ScaleContinuous = void 0;
-        class ScaleContinuous {
-            constructor() {
-                this.setLimits = (min, max) => {
-                    this.min = min;
-                    this.max = max;
-                    return this;
-                };
-                this.unitsToPct = (units) => {
-                    if (units === null)
-                        return null;
-                    if (dtstr.isArray(units)) {
-                        const isSparse = units instanceof dtstr.SparseFloat32Array;
-                        let [i, res] = [units.length, new dtstr.SparseFloat32Array(units)];
-                        while (i--) {
-                            if (isSparse && units.missing.has(i))
-                                continue;
-                            if (units[i] === null) {
-                                res.missing.add(i);
-                                continue;
-                            }
-                            res[i] = (units[i] - this.min) / this.range;
-                        }
-                        return res;
-                    }
-                    return (units - this.min) / this.range;
-                };
-                this.pctToUnits = (pct) => {
-                    if (pct === null)
-                        return null;
-                    if (dtstr.isArray(pct)) {
-                        const isSparse = pct instanceof dtstr.SparseFloat32Array;
-                        let [i, res] = [pct.length, new dtstr.SparseFloat32Array(pct)];
-                        while (i--) {
-                            if (isSparse && pct.missing.has(i))
-                                continue;
-                            if (pct[i] === null) {
-                                res.missing.add(i);
-                                continue;
-                            }
-                            res[i] = this.min + pct[i] * this.range;
-                        }
-                        return res;
-                    }
-                    return this.min + pct * this.range;
-                };
-            }
-            get range() {
-                return this.max - this.min;
-            }
-        }
-        exports.ScaleContinuous = ScaleContinuous;
-    });
-    define("scales/ScaleDiscrete", ["require", "exports", "datastructures", "functions"], function (require, exports, dtstr, funs) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.ScaleDiscrete = void 0;
-        class ScaleDiscrete {
-            constructor() {
-                this.setValues = (values, sorted = false) => {
-                    this.values = sorted ? funs.unique(values) : funs.sort(funs.unique(values));
-                    const n = this.values.length;
-                    this.positions = [...Array(n).keys()].map((i) => (i + 1) / (n + 1));
-                    this.positionValueMap = new Map();
-                    this.values.forEach((e, i) => this.positionValueMap.set(e, this.positions[i]));
-                    return this;
-                };
-                this.unitsToPct = (units) => {
-                    if (units === null)
-                        return null;
-                    if (dtstr.isArray(units)) {
-                        let [i, res] = [units.length, new dtstr.SparseFloat32Array(units.length)];
-                        while (i--) {
-                            if (units[i] === null) {
-                                res.missing.add(i);
-                                continue;
-                            }
-                            res[i] = this.positionValueMap.get(units[i]);
-                        }
-                        return res;
-                    }
-                    return this.positionValueMap.get(units);
-                };
-            }
-        }
-        exports.ScaleDiscrete = ScaleDiscrete;
-    });
-    define("scales/PlotScaleContinuous", ["require", "exports", "functions", "scales/ScaleContinuous"], function (require, exports, funs, ScaleContinuous_js_1) {
+    define("scales/PlotScaleContinuous", ["require", "exports", "sparsearrays"], function (require, exports, sprs) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.PlotScaleContinuous = void 0;
         class PlotScaleContinuous {
             constructor(zero = false) {
+                this.setPlotLimits = (min, max) => {
+                    this.plotMin = min;
+                    this.plotMax = max;
+                    return this;
+                };
+                this.registerData = (data) => {
+                    const sorted = data.sort((a, b) => a - b);
+                    this._dataMin = this.zero ? 0 : sorted[0];
+                    this._dataMax = sorted[sorted.length - 1];
+                    return this;
+                };
                 this.expand = (min, max) => {
-                    this.expandScale.min -= min;
-                    this.expandScale.max += max;
                     this.expandMin += min;
                     this.expandMax += max;
                     return this;
                 };
-                this.setPlotLimits = (min, max) => {
-                    this.plotScale.setLimits(min, max);
-                    return this;
-                };
-                this.registerData = (data) => {
-                    this.dataScale.setLimits(this.zero ? 0 : funs.min(data), funs.max(data));
-                    return this;
-                };
                 this.pctToPlot = (pct) => {
-                    return this.plotScale.pctToUnits(pct);
+                    const { plotMin, plotRange } = this;
+                    if (Array.isArray(pct)) {
+                        let [i, res] = [pct.length, Array(pct.length)];
+                        while (i--)
+                            res[i] = plotMin + pct[i] * plotRange;
+                        return res;
+                    }
+                    return plotMin + pct * plotRange;
                 };
                 this.dataToPlot = (data) => {
-                    const { dataScale, expandScale, plotScale } = this;
-                    return plotScale.pctToUnits(expandScale.unitsToPct(dataScale.unitsToPct(data)));
+                    const { dataMin, dataRange, plotMin, plotRange } = this;
+                    if (sprs.isArrayLike(data)) {
+                        let [i, res] = [data.length, new sprs.SparseUint16Array(data)];
+                        while (i--) {
+                            if (res.empty[i])
+                                continue;
+                            res[i] = plotMin + ((data[i] - dataMin) / dataRange) * plotRange;
+                        }
+                        return res;
+                    }
+                    return plotMin + ((data - dataMin) / dataRange) * plotRange;
                 };
                 this.continuous = true;
-                this.dataScale = new ScaleContinuous_js_1.ScaleContinuous();
-                this.expandScale = new ScaleContinuous_js_1.ScaleContinuous().setLimits(0, 1);
-                this.plotScale = new ScaleContinuous_js_1.ScaleContinuous();
                 this.zero = zero;
+                this.plotMin = 0;
+                this.plotMax = 0;
+                this._dataMax = 0;
+                this._dataMin = 0;
                 this.expandMin = 0;
                 this.expandMax = 0;
             }
+            get plotRange() {
+                return this.plotMax - this.plotMin;
+            }
+            get dataMin() {
+                return this._dataMin - this.expandMin * (this._dataMax - this._dataMin);
+            }
+            get dataMax() {
+                return this._dataMax + this.expandMax * (this._dataMax - this._dataMin);
+            }
+            get dataRange() {
+                return this.dataMax - this.dataMin;
+            }
             get dataRepresentation() {
-                const { dataScale, zero, expandMin, expandMax } = this;
-                const min = zero ? 0 : dataScale.pctToUnits(0 - expandMin);
-                const max = dataScale.pctToUnits(1 + expandMax);
-                return [min, max];
-            }
-            get plotMin() {
-                return this.pctToPlot(0);
-            }
-            get plotMax() {
-                return this.pctToPlot(1);
+                return [this.dataMin, this.dataMax];
             }
         }
         exports.PlotScaleContinuous = PlotScaleContinuous;
     });
-    define("scales/PlotScaleDiscrete", ["require", "exports", "scales/ScaleContinuous", "scales/ScaleDiscrete"], function (require, exports, ScaleContinuous_js_2, ScaleDiscrete_js_1) {
+    define("scales/PlotScaleDiscrete", ["require", "exports", "functions", "sparsearrays"], function (require, exports, funs, sprs) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.PlotScaleDiscrete = void 0;
         class PlotScaleDiscrete {
-            constructor(zero = false) {
+            constructor() {
+                this.setPlotLimits = (min, max) => {
+                    this.plotMin = min;
+                    this.plotMax = max;
+                    return this;
+                };
+                this.registerData = (data) => {
+                    this._dataValues = funs.sort(funs.unique(data));
+                    let i = this._dataValues.length;
+                    this._positions = [...Array(i).keys()].map((e) => (e + 1) / (i + 1));
+                    this.positionValueMap = new Map();
+                    while (i--) {
+                        this.positionValueMap.set(this._dataValues[i], this._positions[i]);
+                    }
+                    return this;
+                };
                 this.expand = (min, max) => {
-                    this.expandScale.min -= min;
-                    this.expandScale.max += max;
                     this.expandMin += min;
                     this.expandMax += max;
                     return this;
                 };
-                this.setPlotLimits = (min, max) => {
-                    this.plotScale.setLimits(min, max);
-                    return this;
-                };
-                this.registerData = (data) => {
-                    this.dataScale.setValues(data);
-                    return this;
-                };
                 this.pctToPlot = (pct) => {
-                    return this.plotScale.pctToUnits(pct);
+                    const { plotMin, plotRange } = this;
+                    if (Array.isArray(pct)) {
+                        let [i, res] = [pct.length, Array(pct.length)];
+                        while (i--)
+                            res[i] = plotMin + pct[i] * plotRange;
+                        return res;
+                    }
+                    return plotMin + pct * plotRange;
                 };
                 this.dataToPlot = (data) => {
-                    const { dataScale, expandScale, plotScale } = this;
-                    return plotScale.pctToUnits(dataScale.unitsToPct(data));
+                    const { expandMin, unitRange, positionValueMap, plotMin, plotRange } = this;
+                    if (sprs.isArrayLike(data)) {
+                        let [i, res] = [data.length, new sprs.SparseUint16Array(data)];
+                        while (i--) {
+                            if (res.empty[i])
+                                continue;
+                            const dataPct = positionValueMap.get(data[i]);
+                            res[i] = plotMin + (-expandMin + dataPct * unitRange) * plotRange;
+                        }
+                        return res;
+                    }
+                    const dataPct = positionValueMap.get(data);
+                    return plotMin + (-expandMin + dataPct * unitRange) * plotRange;
                 };
                 this.continuous = false;
-                this.dataScale = new ScaleDiscrete_js_1.ScaleDiscrete();
-                this.expandScale = new ScaleContinuous_js_2.ScaleContinuous().setLimits(0, 1);
-                this.plotScale = new ScaleContinuous_js_2.ScaleContinuous();
-                this.zero = zero;
+                this.plotMin = 0;
+                this.plotMax = 0;
                 this.expandMin = 0;
                 this.expandMax = 0;
             }
+            get plotRange() {
+                return this.plotMax - this.plotMin;
+            }
             get dataRepresentation() {
-                return this.dataScale.values;
+                return this._dataValues;
             }
-            get plotMin() {
-                return this.pctToPlot(0);
-            }
-            get plotMax() {
-                return this.pctToPlot(1);
+            get unitRange() {
+                return 1 - this.expandMin - this.expandMax;
             }
             get breakWidth() {
-                let vals = this.dataScale.values.filter((e, i) => i < 2);
-                vals = vals.map((e) => this.dataToPlot(e));
-                return Math.abs(vals[1] - vals[0]);
+                return Math.abs(this.dataToPlot(this._dataValues[1]) -
+                    this.dataToPlot(this._dataValues[0]));
             }
         }
         exports.PlotScaleDiscrete = PlotScaleDiscrete;
     });
-    define("scales/AreaScaleContinuous", ["require", "exports", "functions", "datastructures", "scales/ScaleContinuous"], function (require, exports, funs, dtstr, ScaleContinuous_js_3) {
+    define("scales/AreaScaleContinuous", ["require", "exports", "sparsearrays"], function (require, exports, sprs) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.AreaScaleContinuous = void 0;
-        class AreaScaleContinuous extends ScaleContinuous_js_3.ScaleContinuous {
-            constructor() {
-                super();
+        class AreaScaleContinuous {
+            constructor(zero = false) {
+                this.setPlotLimits = (min, max) => {
+                    this.areaMin = min;
+                    this.areaMax = max;
+                    return this;
+                };
                 this.registerData = (data) => {
-                    this.dataScale.setLimits(this.zero ? 0 : funs.min(data), funs.max(data));
+                    const sorted = data.sort((a, b) => a - b);
+                    this.dataMin = this.zero ? 0 : sorted[0];
+                    this.dataMax = sorted[sorted.length - 1];
                     return this;
                 };
                 this.dataToPlot = (data) => {
-                    if (dtstr.isArray(data)) {
-                        const res = this.dataScale.unitsToPct(data);
-                        return res.map((e) => Math.sqrt(e));
+                    const { dataMin, dataMax } = this;
+                    if (sprs.isArrayLike(data)) {
+                        let [i, res] = [data.length, new sprs.SparseFloat32Array(data)];
+                        while (i--) {
+                            if (res.empty[i])
+                                continue;
+                            res[i] = Math.sqrt(data[i] / dataMax);
+                        }
+                        return res;
                     }
-                    return Math.sqrt(this.dataScale.unitsToPct(data));
+                    return Math.sqrt(data / dataMax);
                 };
-                this.zero = true;
-                this.dataScale = new ScaleContinuous_js_3.ScaleContinuous();
-                this.areaScale = new ScaleContinuous_js_3.ScaleContinuous().setLimits(0, 1);
+                this.continuous = true;
+                this.zero = zero;
+                this.areaMin = 0;
+                this.areaMax = 1;
+                this.dataMax = 0;
+                this.dataMin = 0;
+            }
+            get dataRange() {
+                return this.dataMax - this.dataMin;
+            }
+            get dataRepresentation() {
+                return [this.dataMin, this.dataMax];
             }
         }
         exports.AreaScaleContinuous = AreaScaleContinuous;
     });
-    define("scales/LengthScaleContinuous", ["require", "exports", "functions", "datastructures", "scales/ScaleContinuous"], function (require, exports, funs, dtstr, ScaleContinuous_js_4) {
+    define("scales/LengthScaleContinuous", ["require", "exports", "sparsearrays"], function (require, exports, sprs) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.LengthScaleContinuous = void 0;
-        class LengthScaleContinuous extends ScaleContinuous_js_4.ScaleContinuous {
-            constructor() {
-                super();
+        class LengthScaleContinuous {
+            constructor(zero = false) {
+                this.setPlotLimits = (min, max) => {
+                    this.lengthMin = min;
+                    this.lengthMax = max;
+                    return this;
+                };
                 this.registerData = (data) => {
-                    this.dataScale.setLimits(this.zero ? 0 : funs.min(data), funs.max(data));
+                    const sorted = data.sort((a, b) => a - b);
+                    this.dataMin = this.zero ? 0 : sorted[0];
+                    this.dataMax = sorted[sorted.length - 1];
                     return this;
                 };
                 this.dataToPlot = (data) => {
-                    if (dtstr.isArray(data)) {
-                        return this.dataScale.unitsToPct(data);
+                    const { dataMin, dataMax } = this;
+                    if (sprs.isArrayLike(data)) {
+                        let [i, res] = [data.length, new sprs.SparseFloat32Array(data)];
+                        while (i--) {
+                            if (res.empty[i])
+                                continue;
+                            res[i] = data[i] / dataMax;
+                        }
+                        return res;
                     }
-                    return this.dataScale.unitsToPct(data);
+                    return data / dataMax;
                 };
-                this.zero = true;
-                this.dataScale = new ScaleContinuous_js_4.ScaleContinuous();
-                this.lengthScale = new ScaleContinuous_js_4.ScaleContinuous().setLimits(0, 1);
+                this.continuous = true;
+                this.zero = zero;
+                this.lengthMin = 0;
+                this.lengthMax = 1;
+                this.dataMax = 0;
+                this.dataMin = 0;
+            }
+            get dataRange() {
+                return this.dataMax - this.dataMin;
+            }
+            get dataRepresentation() {
+                return [this.dataMin, this.dataMax];
             }
         }
         exports.LengthScaleContinuous = LengthScaleContinuous;
     });
-    define("scales/scales", ["require", "exports", "scales/ScaleContinuous", "scales/ScaleDiscrete", "scales/PlotScaleContinuous", "scales/PlotScaleDiscrete", "scales/AreaScaleContinuous", "scales/LengthScaleContinuous"], function (require, exports, ScaleContinuous_js_5, ScaleDiscrete_js_2, PlotScaleContinuous_js_1, PlotScaleDiscrete_js_1, AreaScaleContinuous_js_1, LengthScaleContinuous_js_1) {
+    define("scales/scales", ["require", "exports", "scales/PlotScaleContinuous", "scales/PlotScaleDiscrete", "scales/AreaScaleContinuous", "scales/LengthScaleContinuous"], function (require, exports, PlotScaleContinuous_js_1, PlotScaleDiscrete_js_1, AreaScaleContinuous_js_1, LengthScaleContinuous_js_1) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
-        __exportStar(ScaleContinuous_js_5, exports);
-        __exportStar(ScaleDiscrete_js_2, exports);
         __exportStar(PlotScaleContinuous_js_1, exports);
         __exportStar(PlotScaleDiscrete_js_1, exports);
         __exportStar(AreaScaleContinuous_js_1, exports);
@@ -1620,7 +1666,7 @@ var PLOTSCAPE = (() => {
         }
         exports.AxisBox = AxisBox;
     });
-    define("auxiliaries/AxisText", ["require", "exports", "auxiliaries/Auxiliary", "functions", "scales/PlotScaleDiscrete"], function (require, exports, Auxiliary_js_2, funs, PlotScaleDiscrete_js_2) {
+    define("auxiliaries/AxisText", ["require", "exports", "auxiliaries/Auxiliary", "functions"], function (require, exports, Auxiliary_js_2, funs) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.AxisText = void 0;
@@ -1661,10 +1707,10 @@ var PLOTSCAPE = (() => {
                 this.nbreaks = nbreaks !== null && nbreaks !== void 0 ? nbreaks : 4;
             }
             get dataBreaks() {
-                if (this.scales[this.along] instanceof PlotScaleDiscrete_js_2.PlotScaleDiscrete) {
-                    return this.scales[this.along].dataRepresentation;
+                if (this.scales[this.along].continuous) {
+                    return funs.prettyBreaks(this.scales[this.along].dataRepresentation, this.nbreaks);
                 }
-                return funs.prettyBreaks(this.scales[this.along].dataRepresentation, this.nbreaks);
+                return this.scales[this.along].dataRepresentation;
             }
             get breaks() {
                 return this.scales[this.along].dataToPlot(this.dataBreaks);
@@ -1690,14 +1736,14 @@ var PLOTSCAPE = (() => {
                 this.draw = (context) => {
                     if (this.label === "_indicator")
                         return;
-                    const { sizeHandler, scales, along, other } = this;
-                    const size = Math.floor(sizeHandler.fontsize * 1.5);
+                    const { scales, along, other } = this;
+                    const { margins, fontsize } = this.sizeHandler;
+                    const size = Math.floor(fontsize * 1.5);
                     const dir = along === "x" ? -1 : 1;
-                    const margin = along === "x" ? sizeHandler.margins.bottom : sizeHandler.margins.left;
+                    const margin = along === "x" ? margins.bottom : margins.left;
                     const coords = { x: null, y: null };
                     coords[along] = scales[along].pctToPlot(0.5);
-                    coords[other] =
-                        scales[other].plotMin - dir * (margin - 1.5 * sizeHandler.fontsize);
+                    coords[other] = scales[other].plotMin - dir * (margin - 1.5 * fontsize);
                     const rot = this.along === "x" ? 0 : 270;
                     context.context.textAlign = "center";
                     context.context.textBaseline = "middle";
@@ -1855,18 +1901,26 @@ var PLOTSCAPE = (() => {
                     return Array.from(new Set(arr.flat()));
                 };
                 this.inSelection = (selPoints) => {
-                    const allPoints = Object.keys(this.representations).map((e) => {
-                        var _a, _b;
-                        return (_b = (_a = this.representations[e]) === null || _a === void 0 ? void 0 : _a.inSelection) === null || _b === void 0 ? void 0 : _b.call(_a, selPoints);
-                    });
-                    return Array.from(new Set(allPoints.flat()));
+                    const repNames = Object.keys(this.representations);
+                    let [i, allCases] = [repNames.length, new Set()];
+                    while (i--) {
+                        const cases = this.representations[repNames[i]].inSelection(selPoints);
+                        let j = cases.length;
+                        while (j--)
+                            allCases.add(cases[j]);
+                    }
+                    return Array.from(allCases);
                 };
                 this.inClickPosition = (clickPoint) => {
-                    const allPoints = Object.keys(this.representations).map((e) => {
-                        var _a, _b;
-                        return (_b = (_a = this.representations[e]) === null || _a === void 0 ? void 0 : _a.atClick) === null || _b === void 0 ? void 0 : _b.call(_a, clickPoint);
-                    });
-                    return Array.from(new Set(allPoints.flat()));
+                    const repNames = Object.keys(this.representations);
+                    let [i, allCases] = [repNames.length, new Set()];
+                    while (i--) {
+                        const cases = this.representations[repNames[i]].atClick(clickPoint);
+                        let j = cases.length;
+                        while (j--)
+                            allCases.add(cases[j]);
+                    }
+                    return Array.from(allCases);
                 };
                 this.updateCurrent = () => this.drawHighlight();
                 this.clearAll = () => this.drawHighlight();
@@ -1958,9 +2012,9 @@ var PLOTSCAPE = (() => {
                     this.handlers.drag.state = this.handlers.state;
                     this.resize();
                     if (scales.x.continuous)
-                        scales.x.expand(0.1, 0.1);
+                        scales.x.expand(scales.x.zero ? 0 : 0.1, 0.1);
                     if (scales.y.continuous)
-                        scales.y.expand(0.1, 0.1);
+                        scales.y.expand(scales.y.zero ? 0 : 0.1, 0.1);
                     Object.keys(scales).forEach((e) => {
                         var _a, _b;
                         (_b = (_a = scales[e]).registerData) === null || _b === void 0 ? void 0 : _b.call(_a, this.getUnique(e));
@@ -1971,8 +2025,6 @@ var PLOTSCAPE = (() => {
                     sceneDiv.addEventListener("mousedown", mouseDownAnyPlot);
                     containerDiv.addEventListener("mousedown", mouseDownThisPlot);
                     Object.keys(handlers).forEach((e) => handlers[e].subscribe(this));
-                    this.drawBase();
-                    this.drawOverlay();
                 };
                 this.id = id;
                 this.representations = {};
@@ -2069,24 +2121,7 @@ var PLOTSCAPE = (() => {
     define("datastructures", ["require", "exports"], function (require, exports) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
-        exports.plotTypeArray = exports.highlightMembershipArray = exports.validMembershipArray = exports.baseMembershipArray = exports.Mapping = exports.DataFrame = exports.SparseFloat32Array = exports.isArray = void 0;
-        const isArray = (x) => {
-            return Array.isArray(x) || ArrayBuffer.isView(x);
-        };
-        exports.isArray = isArray;
-        class SparseFloat32Array extends Float32Array {
-            constructor(arg) {
-                if (arg instanceof SparseFloat32Array) {
-                    super(arg.length);
-                    this.missing = arg.missing;
-                    return;
-                }
-                const n = typeof arg === "number" ? arg : arg.length;
-                super(n);
-                this.missing = new Set();
-            }
-        }
-        exports.SparseFloat32Array = SparseFloat32Array;
+        exports.plotTypeArray = exports.highlightMembershipArray = exports.validMembershipArray = exports.baseMembershipArray = exports.Mapping = exports.DataFrame = void 0;
         class DataFrame {
             constructor(data) {
                 Object.keys(data).forEach((e) => (this[e] = data[e]));
@@ -2133,14 +2168,11 @@ var PLOTSCAPE = (() => {
                 super(plotConfig);
                 this.mapping = mapping;
                 this.wranglers = {
-                    wrangler1: new Wrangler_js_1.Wrangler(data, mapping, globals.marker).extractAsIs(...mapping.keys()),
+                    wrangler1: new Wrangler_js_1.Wrangler(data, mapping, globals.marker).extractAsIs("x", "y"),
                 };
                 this.scales = {
                     x: new scls.PlotScaleContinuous(),
                     y: new scls.PlotScaleContinuous(),
-                    // ...(mapping.get("size") && {
-                    //   size: new scls.AreaScaleContinuous(1, this),
-                    // }),
                 };
                 this.representations = {
                     points: new reps.Points(this.wranglers.wrangler1),
@@ -2281,11 +2313,13 @@ var PLOTSCAPE = (() => {
                 const { data, mapping, globals } = plotConfig;
                 if (!mapping.has("size"))
                     mapping.set("size", "_indicator");
+                if (!mapping.has("fillHeight"))
+                    mapping.set("fillHeight", "_indicator");
                 super(plotConfig);
                 this.wranglers = {
                     wrangler1: new Wrangler_js_6.Wrangler(data, mapping, globals.marker)
                         .splitBy("x", "y")
-                        .splitWhat("size")
+                        .splitWhat("size", "fillHeight")
                         .doAcross("by", funs.toPretty, 10)
                         .doWithin("by", funs.unique)
                         .doWithin("what", funs.sum)
@@ -2295,6 +2329,7 @@ var PLOTSCAPE = (() => {
                     x: new scls.PlotScaleContinuous(),
                     y: new scls.PlotScaleContinuous(),
                     size: new scls.AreaScaleContinuous(),
+                    fillHeight: new scls.LengthScaleContinuous(),
                 };
                 this.representations = {
                     squares: new reps.Squares(this.wranglers.wrangler1),
@@ -2332,7 +2367,7 @@ var PLOTSCAPE = (() => {
         <br>
     `;
     });
-    define("Scene", ["require", "exports", "datastructures", "handlers/handlers", "plot/plots", "helppaneltext"], function (require, exports, dtstr, hndl, plts, helppaneltext_js_1) {
+    define("Scene", ["require", "exports", "datastructures", "handlers/handlers", "plot/plots", "helppaneltext", "globalparameters"], function (require, exports, dtstr, hndl, plts, helppaneltext_js_1, globalparameters_js_3) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.Scene = void 0;
@@ -2395,6 +2430,8 @@ var PLOTSCAPE = (() => {
                 };
                 this.sceneDiv.classList.add("plotscape-scene");
                 this.sceneDiv.classList.add("js-plotscape-scene");
+                this.sceneDiv.style.backgroundColor = globalparameters_js_3.globalParameters.scene.backgroundColour;
+                this.sceneDiv.style.border = `#000000`;
                 this.globals.state.keypressHandler = this.globals.keypress;
                 this.globals.keypress.subscribe(this.globals.state);
                 // Inject css

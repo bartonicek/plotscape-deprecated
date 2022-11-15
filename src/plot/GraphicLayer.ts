@@ -1,4 +1,5 @@
-import * as dtstr from "../datastructures.js";
+import * as sprs from "../sparsearrays.js";
+
 import {
   globalParameters as gpars,
   SingleValuedRepPars,
@@ -44,14 +45,6 @@ export class GraphicLayer {
     this.context.scale(this.scaleFactor, this.scaleFactor);
   };
 
-  anyMissing = (i: number, ...arrs: dtstr.SparseFloat32Array[]) => {
-    let j = arrs.length;
-    while (j--) {
-      if (arrs[j].missing.has(i)) return true;
-    }
-    return false;
-  };
-
   toAlpha = (col: string, alpha: number) => {
     if (alpha === 1) return col;
     let alpha16 = Math.floor(alpha * 255)
@@ -77,17 +70,14 @@ export class GraphicLayer {
   };
 
   drawBarsV = (
-    x: dtstr.SparseFloat32Array,
-    y0: dtstr.SparseFloat32Array,
-    y1: dtstr.SparseFloat32Array,
-    width: dtstr.SparseFloat32Array,
+    x: sprs.SparseUint16Array,
+    y0: sprs.SparseUint16Array,
+    y1: sprs.SparseUint16Array,
+    width: sprs.SparseUint16Array,
     pars = this.defaultPars
   ) => {
     const { colour, strokeColour, strokeWidth, alpha } = pars;
     const [context, w] = [this.context, width];
-    const missing = new Set(
-      [x, y0, y1, width].map((e) => [...e.missing]).flat()
-    );
 
     context.save();
     context.fillStyle = this.toAlpha(colour, alpha);
@@ -96,7 +86,7 @@ export class GraphicLayer {
 
     let i = x.length;
     while (i--) {
-      if (missing.has(i)) continue;
+      if (x.empty[i] || y0.empty[i] || y1.empty[i] || width.empty[i]) continue;
       if (colour) context.fillRect(x[i] - w[i] / 2, y1[i], w[i], y0[i] - y1[i]);
       if (strokeColour)
         context.strokeRect(x[i] - w[i] / 2, y1[i], w[i], y0[i] - y1[i]);
@@ -106,14 +96,14 @@ export class GraphicLayer {
   };
 
   drawPoints = (
-    x: dtstr.SparseFloat32Array,
-    y: dtstr.SparseFloat32Array,
-    radius: dtstr.SparseFloat32Array,
-    pars = this.defaultPars
+    x: sprs.SparseUint16Array,
+    y: sprs.SparseUint16Array,
+    radius: sprs.SparseUint16Array,
+    pars = this.defaultPars,
+    empty?: Uint8Array
   ) => {
     const context = this.context;
     const { colour, strokeColour, strokeWidth, alpha } = pars;
-    const missing = new Set([x, y, radius].map((e) => [...e.missing]).flat());
 
     context.save();
     context.fillStyle = this.toAlpha(colour, alpha);
@@ -122,7 +112,7 @@ export class GraphicLayer {
 
     let i = x.length;
     while (i--) {
-      if (missing.has(i)) continue;
+      if (x.empty[i] || y.empty[i] || radius.empty[i]) continue;
       context.beginPath();
       context.arc(x[i], y[i], radius[i], 0, Math.PI * 2);
       if (strokeColour) context.stroke();
@@ -133,15 +123,14 @@ export class GraphicLayer {
   };
 
   drawRectsHW = (
-    x: dtstr.SparseFloat32Array,
-    y: dtstr.SparseFloat32Array,
-    h: dtstr.SparseFloat32Array,
-    w: dtstr.SparseFloat32Array,
+    x: sprs.SparseUint16Array,
+    y: sprs.SparseUint16Array,
+    h: sprs.SparseUint16Array,
+    w: sprs.SparseUint16Array,
     pars = this.defaultPars
   ) => {
     const context = this.context;
     const { colour, strokeColour, strokeWidth, alpha } = pars;
-    const missing = new Set([x, y, h, w].map((e) => [...e.missing]).flat());
 
     context.save();
     context.fillStyle = this.toAlpha(colour, alpha);
@@ -150,7 +139,7 @@ export class GraphicLayer {
 
     let i = x.length;
     while (i--) {
-      if (missing.has(i)) continue;
+      // if (empty[i]) continue;
       if (colour)
         context.fillRect(x[i] - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
       if (strokeColour)
@@ -227,7 +216,7 @@ export class GraphicLayer {
     context.restore();
   };
 
-  drawDim = (col = "rgba(120, 120, 120, 0.1)") => {
+  drawDim = (col = "rgba(120, 120, 120, 0.05)") => {
     const context = this.context;
     context.fillStyle = col;
     context.fillRect(0, 0, this.width, this.height);

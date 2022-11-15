@@ -3,6 +3,7 @@ import * as hndl from "./handlers/handlers.js";
 import * as plts from "./plot/plots.js";
 import { Plot } from "./plot/Plot.js";
 import { helpPanelText } from "./helppaneltext.js";
+import { globalParameters as gpars } from "./globalparameters.js";
 
 export class Scene {
   sceneDiv: HTMLDivElement;
@@ -38,6 +39,8 @@ export class Scene {
 
     this.sceneDiv.classList.add("plotscape-scene");
     this.sceneDiv.classList.add("js-plotscape-scene");
+    this.sceneDiv.style.backgroundColor = gpars.scene.backgroundColour;
+    this.sceneDiv.style.border = `#000000`;
 
     this.globals.state.keypressHandler = this.globals.keypress;
     this.globals.keypress.subscribe(this.globals.state);

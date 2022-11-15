@@ -22,13 +22,13 @@ export class AxisText extends Auxiliary {
   }
 
   get dataBreaks() {
-    if (this.scales[this.along] instanceof PlotScaleDiscrete) {
-      return this.scales[this.along].dataRepresentation;
+    if (this.scales[this.along].continuous) {
+      return funs.prettyBreaks(
+        this.scales[this.along].dataRepresentation,
+        this.nbreaks
+      );
     }
-    return funs.prettyBreaks(
-      this.scales[this.along].dataRepresentation,
-      this.nbreaks
-    );
+    return this.scales[this.along].dataRepresentation;
   }
 
   get breaks() {

@@ -1,36 +1,5 @@
 import * as hndl from "handlers/handlers.js";
 
-type TypedArray =
-  | Int8Array
-  | Uint8Array
-  | Uint8ClampedArray
-  | Int16Array
-  | Uint16Array
-  | Int32Array
-  | Uint32Array
-  | Float32Array
-  | Float64Array;
-
-const isArray = <Type>(
-  x: Type | Type[] | TypedArray
-): x is Array<Type> | TypedArray => {
-  return Array.isArray(x) || ArrayBuffer.isView(x);
-};
-
-class SparseFloat32Array extends Float32Array {
-  missing: Set<number>;
-  constructor(arg: number | VectorGeneric | SparseFloat32Array) {
-    if (arg instanceof SparseFloat32Array) {
-      super(arg.length);
-      this.missing = arg.missing;
-      return;
-    }
-    const n = typeof arg === "number" ? arg : arg.length;
-    super(n);
-    this.missing = new Set();
-  }
-}
-
 type MethodsOf<Type> = Pick<
   Type,
   {
@@ -98,8 +67,6 @@ type Globals = {
 };
 
 export {
-  isArray,
-  SparseFloat32Array,
   MethodsOf,
   DataFrame,
   VectorGeneric,

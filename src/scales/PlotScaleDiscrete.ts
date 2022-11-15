@@ -1,67 +1,91 @@
-import { ScaleContinuous } from "./ScaleContinuous.js";
-import { ScaleDiscrete } from "./ScaleDiscrete.js";
+import * as funs from "../functions.js";
+import * as sprs from "../sparsearrays.js";
 
 export class PlotScaleDiscrete {
   readonly continuous: boolean;
-  dataScale: ScaleDiscrete;
-  expandScale: ScaleContinuous;
-  plotScale: ScaleContinuous;
-  zero: boolean;
+  readonly zero: boolean;
+  plotMin: number;
+  plotMax: number;
+  private _dataValues: any[];
+  private _positions: number[];
+  positionValueMap: Map<any, number>;
   expandMin: number;
   expandMax: number;
 
-  constructor(zero = false) {
+  constructor() {
     this.continuous = false;
-    this.dataScale = new ScaleDiscrete();
-    this.expandScale = new ScaleContinuous().setLimits(0, 1);
-    this.plotScale = new ScaleContinuous();
-    this.zero = zero;
+    this.plotMin = 0;
+    this.plotMax = 0;
     this.expandMin = 0;
     this.expandMax = 0;
   }
 
+  get plotRange() {
+    return this.plotMax - this.plotMin;
+  }
+
   get dataRepresentation() {
-    return this.dataScale.values;
+    return this._dataValues;
   }
 
-  get plotMin() {
-    return this.pctToPlot(0) as number;
-  }
-
-  get plotMax() {
-    return this.pctToPlot(1) as number;
+  get unitRange() {
+    return 1 - this.expandMin - this.expandMax;
   }
 
   get breakWidth() {
-    let vals = this.dataScale.values.filter((e, i) => i < 2);
-    vals = vals.map((e) => this.dataToPlot(e) as number);
-    return Math.abs(vals[1] - vals[0]);
+    return Math.abs(
+      (this.dataToPlot(this._dataValues[1]) as number) -
+        (this.dataToPlot(this._dataValues[0]) as number)
+    );
   }
 
+  setPlotLimits = (min: number, max: number) => {
+    this.plotMin = min;
+    this.plotMax = max;
+    return this;
+  };
+
+  registerData = (data: any[]) => {
+    this._dataValues = funs.sort(funs.unique(data));
+    let i = this._dataValues.length;
+    this._positions = [...Array(i).keys()].map((e) => (e + 1) / (i + 1));
+    this.positionValueMap = new Map();
+    while (i--) {
+      this.positionValueMap.set(this._dataValues[i], this._positions[i]);
+    }
+
+    return this;
+  };
+
   expand = (min: number, max: number) => {
-    this.expandScale.min -= min;
-    this.expandScale.max += max;
     this.expandMin += min;
     this.expandMax += max;
     return this;
   };
 
-  setPlotLimits = (min: number, max: number) => {
-    this.plotScale.setLimits(min, max);
-    return this;
-  };
-
-  registerData = (data: number[]) => {
-    this.dataScale.setValues(data);
-    return this;
-  };
-
   pctToPlot = (pct: number | number[]) => {
-    return this.plotScale.pctToUnits(pct);
+    const { plotMin, plotRange } = this;
+    if (Array.isArray(pct)) {
+      let [i, res] = [pct.length, Array(pct.length)];
+      while (i--) res[i] = plotMin + pct[i] * plotRange;
+      return res;
+    }
+    return plotMin + pct * plotRange;
   };
 
-  dataToPlot = (data: any | any[]) => {
-    const { dataScale, expandScale, plotScale } = this;
-    return plotScale.pctToUnits(dataScale.unitsToPct(data));
+  dataToPlot = (data: any | any[] | sprs.SparseArray) => {
+    const { expandMin, unitRange, positionValueMap, plotMin, plotRange } = this;
+
+    if (sprs.isArrayLike(data)) {
+      let [i, res] = [data.length, new sprs.SparseUint16Array(data)];
+      while (i--) {
+        if (res.empty[i]) continue;
+        const dataPct = positionValueMap.get(data[i]) as number;
+        res[i] = plotMin + (-expandMin + dataPct * unitRange) * plotRange;
+      }
+      return res;
+    }
+    const dataPct = positionValueMap.get(data) as number;
+    return plotMin + (-expandMin + dataPct * unitRange) * plotRange;
   };
 }

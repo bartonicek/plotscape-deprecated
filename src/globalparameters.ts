@@ -1,4 +1,7 @@
 export const globalParameters = {
+  scene: {
+    backgroundColour: `#deded9`,
+  },
   plot: {
     scaleExpandFactor: 0.1,
     backgroundColour: `#F7F7F2`,
@@ -7,7 +10,7 @@ export const globalParameters = {
   reps: {
     colour: [`#cccccc`, `#7fc97f`, `#fdc086`, `#beaed4`, `#386cb0`],
     strokeColour: [null, `#7fc97f`, `#fdc086`, `#beaed4`, `#386cb0`],
-    strokeWidth: [null, 1, 1, 1, 1],
+    strokeWidth: [null, null, null, null, 1],
     radius: [1, 1, 1, 1, 1],
     alpha: [1, 1, 1, 1, 1],
   },

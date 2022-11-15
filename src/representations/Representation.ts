@@ -10,6 +10,8 @@ import { Wrangler } from "../wrangler/Wrangler.js";
 
 export class Representation {
   wrangler: Wrangler;
+  selectedCases: number[];
+
   plotDims: { width: number; height: number };
   scales: { [key: string]: any };
   pars: RepParsWide;
@@ -22,49 +24,29 @@ export class Representation {
 
   constructor(wrangler: Wrangler) {
     this.wrangler = wrangler;
+    this.selectedCases = new Array(wrangler.n);
+
+    const p = globalParameters.reps;
     this.pars = dtstr.validMembershipArray.map((e) => {
-      const p = globalParameters.reps;
       if (e === 128) return funs.accessIndexed(p, p.colour.length - 1);
       return funs.accessIndexed(p, (e & ~128) - 1);
     });
-    this.pattern = funs.createStripePattern(
-      this.pars[this.pars.length - 1].colour,
-      10
-    );
     this.sizeMultiplier = 1;
     this.alphaMultiplier = 1;
-    this.sizeLimits = {
-      min: 1 / 5,
-      max: 5,
-    };
-    this.alphaLimits = {
-      min: 0.01,
-      max: 1,
-    };
+    this.sizeLimits = { min: 0.2, max: 5 };
+    this.alphaLimits = { min: 0.01, max: 1 };
   }
 
   getMapping = (
     mapping: dtstr.ValidMappings,
     membership?: dtstr.ValidMemberships
   ) => {
-    let res = this.wrangler[mapping]?.extract(membership);
+    const { wrangler, scales } = this;
+    const res = wrangler[mapping]?.extract(membership, wrangler.emptyObjects);
     if (!res) return [];
-    return this.scales[mapping].dataToPlot(res);
+    const coords = scales[mapping].dataToPlot(res, wrangler.emptyObjects);
+    return coords;
   };
-
-  // getMappings2 = (
-  //   membership: dtstr.ValidMemberships,
-  //   ...mappings: dtstr.ValidMappings[]
-  // ) => {
-  //   const { scales, wrangler } = this;
-  //   let [i, res] = [mappings.length, Array(mappings.length)];
-  //   while (i--) {
-  //     const mapping = wrangler[mappings[i]];
-  //     res[i] = scales[mapping].dataToPlot(
-  //       wrangler[mappings[i]]?.extract(membership)
-  //     );
-  //   }
-  // };
 
   get boundingRects() {
     return [];
@@ -72,17 +54,17 @@ export class Representation {
 
   getPars = (membership: dtstr.ValidMemberships) => {
     if (membership === 128 && this.wrangler.marker.anyPersistent) {
-      return {
-        ...this.pars[this.pars.length - 1],
-        colour: this.pattern,
-      } as unknown as SingleValuedRepPars;
+      let pars = this.pars[this.pars.length - 1];
+      pars = { ...pars, colour: `${pars.colour}66` };
+      return pars;
     }
+
     if (membership === 128) return this.pars[this.pars.length - 1];
     return this.pars[(membership & ~128) - 1];
   };
 
   drawBase = (context: GraphicLayer) => {};
-  drawHighlight = (context: GraphicLayer, selectedPoints: number[]) => {};
+  drawHighlight = (context: GraphicLayer) => {};
 
   registerScales = (scales: any) => {
     this.scales = scales;
@@ -94,28 +76,43 @@ export class Representation {
     this.sizeMultiplier = 1;
   };
 
-  // Checks which bounding rects overlap with a rectangular selection region
-  //E.g. [[0, 0], [Width, Height]] should include all bound. rects
   inSelection = (selectionRect: dtstr.Rect2Points) => {
-    const { wrangler, boundingRects } = this;
-    const selectedReps = boundingRects.map((rect: dtstr.Rect2Points) => {
-      return funs.rectOverlap(selectionRect, rect);
-    });
-    const selectedDatapoints = wrangler.indices.flatMap((e, i) => {
-      return selectedReps[e] ? i : [];
-    });
-    return selectedDatapoints;
+    const { wrangler, boundingRects, selectedCases } = this;
+    let [i, k] = [boundingRects.length, wrangler.n];
+    while (i--) {
+      // If the ith representation is selected...
+      if (funs.rectOverlap(selectionRect, boundingRects[i])) {
+        // ...append all case indices that correspond to it
+        // to the list of the selected cases, starting from the end
+        let j = wrangler.n;
+        while (j--) {
+          if (wrangler.indices[j] === i) selectedCases[--k] = j;
+        }
+      }
+    }
+
+    // Return only the selected indices
+    return selectedCases.slice(k, wrangler.n);
   };
 
   atClick = (clickPoint: [number, number]) => {
-    const { wrangler, boundingRects } = this;
-    const selectedReps = boundingRects.map((rect: dtstr.Rect2Points) => {
-      return funs.pointInRect(clickPoint, rect);
-    });
-    const selectedDatapoints = wrangler.indices.flatMap((e, i) => {
-      return selectedReps[e] ? i : [];
-    });
-    return selectedDatapoints;
+    const { wrangler, selectedCases, boundingRects } = this;
+
+    let [i, k] = [boundingRects.length, wrangler.n];
+    while (i--) {
+      // If the ith representation is clicked...
+      if (funs.pointInRect(clickPoint, boundingRects[i])) {
+        // ...add all case indices that correspond to it
+        // to the list of selected cases, starting from the end
+        let j = wrangler.n;
+        while (j--) {
+          if (wrangler.indices[j] === i) selectedCases[--k] = j;
+        }
+      }
+    }
+
+    // Return only the selected indices
+    return selectedCases.slice(k, wrangler.n);
   };
 
   // Handle generic keypress actions

@@ -1,20 +1,26 @@
 import * as dtstr from "../datastructures.js";
-import * as funs from "../functions.js";
+import * as sprs from "../sparsearrays.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 import { Representation } from "./Representation.js";
 
 export class Points extends Representation {
+  x: Uint16Array;
+  y: Uint16Array;
+  size: Uint16Array;
+  hasSize: boolean;
+
   constructor(wrangler: Wrangler) {
     super(wrangler);
+    this.hasSize = !!wrangler.mapping.get("size");
   }
 
   get defaultRadius() {
     const { x, y } = this.scales;
-    if (x.breakWidth && y.breakWidth) {
-      return Math.min(x.breakWidth, y.breakWidth) / 2;
+    if (!x.continuous && !y.continuous) {
+      return Math.min(x.breakWidth, y.breakWidth) / Math.sqrt(Math.PI);
     }
-    const length = Math.min(...[x, y].map((e) => Math.abs(e.plotScale.range)));
+    const length = Math.min(...[x, y].map((e) => Math.abs(e.plotRange)));
     const c = 10 * Math.log(this.wrangler.n);
     return length / c;
   }
@@ -25,13 +31,13 @@ export class Points extends Representation {
     let [x, y, size] = mappings.map((e) => getMapping(e, membership));
     const radius = getPars(membership).radius;
 
-    if (!size.length) {
-      size = new dtstr.SparseFloat32Array(x.length).fill(
+    if (!this.hasSize) {
+      size = new sprs.SparseUint16Array(x.length).fill(
         radius * defaultRadius * sizeMultiplier
       );
+
       return [x, y, size];
     }
-
     size = size.map((e) => e * radius * defaultRadius * sizeMultiplier);
     return [x, y, size];
   };
@@ -39,7 +45,7 @@ export class Points extends Representation {
   drawBase = (context: GraphicLayer) => {
     const [x, y, size] = this.getMappings(1);
     const pars = { ...this.getPars(1), alpha: this.alphaMultiplier };
-    context.drawPoints(x, y, size, pars);
+    context.drawPoints(x, y, size, pars, this.wrangler.emptyObjects);
   };
 
   drawHighlight = (context: GraphicLayer) => {
@@ -47,14 +53,13 @@ export class Points extends Representation {
       const [x, y, size] = this.getMappings(e);
       if (!(x.length > 0)) return;
       const pars = { ...this.getPars(e), alpha: 1 };
-      context.drawPoints(x, y, size, pars);
+      context.drawPoints(x, y, size, pars, this.wrangler.emptyObjects);
     });
   };
 
   get boundingRects() {
     const [x, y, size] = this.getMappings(1);
     const c = 1 / Math.sqrt(2);
-
     let [i, res] = [x.length, Array(x.length)];
     while (i--) {
       res[i] = [
@@ -62,7 +67,6 @@ export class Points extends Representation {
         [x[i] + c * size[i], y[i] + c * size[i]],
       ];
     }
-
     return res;
   }
 }

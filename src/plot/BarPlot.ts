@@ -27,6 +27,7 @@ export class BarPlot extends Plot {
     this.representations = {
       bars: new reps.Bars(this.wranglers.wrangler1, 0.8),
     };
+
     this.initialize();
   }
 }

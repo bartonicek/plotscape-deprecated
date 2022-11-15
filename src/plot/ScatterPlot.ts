@@ -14,16 +14,14 @@ export class ScatterPlot extends Plot {
     this.mapping = mapping;
     this.wranglers = {
       wrangler1: new Wrangler(data, mapping, globals.marker).extractAsIs(
-        ...mapping.keys()
+        "x",
+        "y"
       ),
     };
 
     this.scales = {
       x: new scls.PlotScaleContinuous(),
       y: new scls.PlotScaleContinuous(),
-      // ...(mapping.get("size") && {
-      //   size: new scls.AreaScaleContinuous(1, this),
-      // }),
     };
 
     this.representations = {
