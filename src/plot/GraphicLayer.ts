@@ -99,8 +99,7 @@ export class GraphicLayer {
     x: sprs.SparseUint16Array,
     y: sprs.SparseUint16Array,
     radius: sprs.SparseUint16Array,
-    pars = this.defaultPars,
-    empty?: Uint8Array
+    pars = this.defaultPars
   ) => {
     const context = this.context;
     const { colour, strokeColour, strokeWidth, alpha } = pars;
@@ -112,7 +111,7 @@ export class GraphicLayer {
 
     let i = x.length;
     while (i--) {
-      if (x.empty[i] || y.empty[i] || radius.empty[i]) continue;
+      if (x.empty[i]) continue;
       context.beginPath();
       context.arc(x[i], y[i], radius[i], 0, Math.PI * 2);
       if (strokeColour) context.stroke();
@@ -139,7 +138,7 @@ export class GraphicLayer {
 
     let i = x.length;
     while (i--) {
-      // if (empty[i]) continue;
+      if (x.empty[i]) continue;
       if (colour)
         context.fillRect(x[i] - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
       if (strokeColour)

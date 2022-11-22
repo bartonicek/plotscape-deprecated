@@ -22,13 +22,11 @@ export class AxisText extends Auxiliary {
   }
 
   get dataBreaks() {
-    if (this.scales[this.along].continuous) {
-      return funs.prettyBreaks(
-        this.scales[this.along].dataRepresentation,
-        this.nbreaks
-      );
+    const { scales, along, nbreaks } = this;
+    if (scales[along].continuous) {
+      return funs.prettyBreaks(scales[along].dataRepresentation, nbreaks);
     }
-    return this.scales[this.along].dataRepresentation;
+    return scales[along].dataRepresentation;
   }
 
   get breaks() {

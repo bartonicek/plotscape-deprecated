@@ -1,11 +1,6 @@
 import * as dtstr from "../datastructures.js";
 import * as funs from "../functions.js";
-import {
-  globalParameters,
-  RepParsWide,
-  SingleValuedRepPars,
-} from "../globalparameters.js";
-import { GraphicLayer } from "../plot/GraphicLayer.js";
+import { globalParameters, RepParsWide } from "../globalparameters.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 
 export class Representation {
@@ -17,10 +12,10 @@ export class Representation {
   pars: RepParsWide;
   pattern: CanvasPattern;
 
-  sizeMultiplier: number;
-  sizeLimits: { min: number; max: number };
-  alphaMultiplier: number;
-  alphaLimits: { min: number; max: number };
+  sizeX: number;
+  sizeLim: { min: number; max: number };
+  alphaX: number;
+  alphaLim: { min: number; max: number };
 
   constructor(wrangler: Wrangler) {
     this.wrangler = wrangler;
@@ -31,26 +26,35 @@ export class Representation {
       if (e === 128) return funs.accessIndexed(p, p.colour.length - 1);
       return funs.accessIndexed(p, (e & ~128) - 1);
     });
-    this.sizeMultiplier = 1;
-    this.alphaMultiplier = 1;
-    this.sizeLimits = { min: 0.2, max: 5 };
-    this.alphaLimits = { min: 0.01, max: 1 };
+    this.sizeX = 1;
+    this.alphaX = 1;
+    this.sizeLim = { min: 0.2, max: 5 };
+    this.alphaLim = { min: 0.01, max: 1 };
   }
-
-  getMapping = (
-    mapping: dtstr.ValidMappings,
-    membership?: dtstr.ValidMemberships
-  ) => {
-    const { wrangler, scales } = this;
-    const res = wrangler[mapping]?.extract(membership, wrangler.emptyObjects);
-    if (!res) return [];
-    const coords = scales[mapping].dataToPlot(res, wrangler.emptyObjects);
-    return coords;
-  };
 
   get boundingRects() {
     return [];
   }
+
+  getMapping = (
+    membership: dtstr.ValidMemberships,
+    mapping: dtstr.ValidMappings
+  ) => {
+    const { wrangler, scales } = this;
+    const res = wrangler[mapping]?.extract(membership, wrangler.emptyObjects);
+    if (!res) return null;
+    const coords = scales[mapping].dataToPlot(res, wrangler.emptyObjects);
+    return coords;
+  };
+
+  getMappings = (
+    membership: dtstr.ValidMemberships,
+    ...mappings: dtstr.ValidMappings[]
+  ) => {
+    let [i, res] = [mappings.length, Array(mappings.length)];
+    while (i--) res[i] = this.getMapping(membership, mappings[i]);
+    return res;
+  };
 
   getPars = (membership: dtstr.ValidMemberships) => {
     if (membership === 128 && this.wrangler.marker.anyPersistent) {
@@ -63,17 +67,14 @@ export class Representation {
     return this.pars[(membership & ~128) - 1];
   };
 
-  drawBase = (context: GraphicLayer) => {};
-  drawHighlight = (context: GraphicLayer) => {};
-
   registerScales = (scales: any) => {
     this.scales = scales;
     return this;
   };
 
   defaultize = () => {
-    this.alphaMultiplier = 1;
-    this.sizeMultiplier = 1;
+    this.alphaX = 1;
+    this.sizeX = 1;
   };
 
   inSelection = (selectionRect: dtstr.Rect2Points) => {
@@ -117,31 +118,28 @@ export class Representation {
 
   // Handle generic keypress actions
   keyPressed = (key: string) => {
-    const { sizeMultiplier, sizeLimits, alphaMultiplier, alphaLimits } = this;
+    const {
+      sizeX: sizeMultiplier,
+      sizeLim: sizeLimits,
+      alphaX: alphaMultiplier,
+      alphaLim: alphaLimits,
+    } = this;
 
     if (key === "KeyR") this.defaultize();
 
     if (key === "Minus" && sizeMultiplier) {
-      this.sizeMultiplier = funs.gatedMultiply(sizeMultiplier, 0.8, sizeLimits);
+      this.sizeX = funs.gatedMultiply(sizeMultiplier, 0.8, sizeLimits);
     }
 
     if (key === "Equal" && sizeMultiplier && sizeMultiplier < sizeLimits.max) {
-      this.sizeMultiplier = funs.gatedMultiply(sizeMultiplier, 1.2, sizeLimits);
+      this.sizeX = funs.gatedMultiply(sizeMultiplier, 1.2, sizeLimits);
     }
 
     if (key === "BracketLeft" && alphaMultiplier) {
-      this.alphaMultiplier = funs.gatedMultiply(
-        alphaMultiplier,
-        0.8,
-        alphaLimits
-      );
+      this.alphaX = funs.gatedMultiply(alphaMultiplier, 0.8, alphaLimits);
     }
 
     if (key === "BracketRight" && alphaMultiplier)
-      this.alphaMultiplier = funs.gatedMultiply(
-        alphaMultiplier,
-        1.2,
-        alphaLimits
-      );
+      this.alphaX = funs.gatedMultiply(alphaMultiplier, 1.2, alphaLimits);
   };
 }

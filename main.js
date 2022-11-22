@@ -99,12 +99,13 @@ const layout = [
 
 const scene = new PLOTSCAPE.Scene(div1, data)
   .addPlotWrapper("bar", new PLOTSCAPE.Mapping(["x", "cyl"]))
-  .addPlotWrapper("square", new PLOTSCAPE.Mapping(["x", "gear"], ["y", "am"]))
-  .addPlotWrapper(
-    "squareheat",
-    new PLOTSCAPE.Mapping(["x", "wt"], ["y", "mpg"])
-  );
+  .addPlotWrapper("bubble", new PLOTSCAPE.Mapping(["x", "gear"], ["y", "am"]))
+  .addPlotWrapper("scatter", new PLOTSCAPE.Mapping(["x", "wt"], ["y", "mpg"]));
 
-const h1 = scene.plots.histo1;
+console.log("aaa");
 
-console.log(scene);
+const p1 = () => new Promise((resolve) => resolve([1, 2, 3]));
+const p2 = () => new Promise((resolve) => resolve([4, 5, 6]));
+
+const res = await Promise.all([p1(), p2()]);
+console.log(res.flat());

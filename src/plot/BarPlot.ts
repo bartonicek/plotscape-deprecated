@@ -12,10 +12,10 @@ export class BarPlot extends Plot {
 
     this.wranglers = {
       wrangler1: new Wrangler(data, mapping, globals.marker)
-        .splitBy("x")
-        .splitWhat("y")
-        .doWithin("by", funs.unique)
-        .doWithin("what", funs.sum)
+        .groupBy("x")
+        .groupWhat("y")
+        .doReduce("by", funs.unique)
+        .doReduce("what", funs.sum)
         .assignIndices(),
     };
 
@@ -23,6 +23,8 @@ export class BarPlot extends Plot {
       x: new scls.PlotScaleDiscrete(),
       y: new scls.PlotScaleContinuous(true),
     };
+
+    this.yExpandDirection = -1;
 
     this.representations = {
       bars: new reps.Bars(this.wranglers.wrangler1, 0.8),

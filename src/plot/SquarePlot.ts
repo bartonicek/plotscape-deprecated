@@ -9,15 +9,15 @@ export class SquarePlot extends Plot {
   constructor(plotConfig: dtstr.PlotConfig) {
     const { data, mapping, globals } = plotConfig;
     if (!mapping.has("size")) mapping.set("size", "_indicator");
-    if (!mapping.has("fillHeight")) mapping.set("fillHeight", "_indicator");
+    if (!mapping.has("fillSize")) mapping.set("fillSize", "_indicator");
     super(plotConfig);
 
     this.wranglers = {
       wrangler1: new Wrangler(data, mapping, globals.marker)
-        .splitBy("x", "y")
-        .splitWhat("size", "fillHeight")
-        .doWithin("by", funs.unique)
-        .doWithin("what", funs.sum)
+        .groupBy("x", "y")
+        .groupWhat("size", "fillSize")
+        .doReduce("by", funs.unique)
+        .doReduce("what", funs.sum)
         .assignIndices(),
     };
 
@@ -25,7 +25,7 @@ export class SquarePlot extends Plot {
       x: new scls.PlotScaleDiscrete(),
       y: new scls.PlotScaleDiscrete(),
       size: new scls.AreaScaleContinuous(),
-      fillHeight: new scls.LengthScaleContinuous(),
+      fillSize: new scls.LengthScaleContinuous(),
     };
 
     this.representations = {

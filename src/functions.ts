@@ -253,7 +253,7 @@ const createStripePattern = (colour: string, size: number) => {
 };
 
 // Function to construct "pretty" breaks, inspired by R's pretty()
-const prettyBreaks = (x: number[], n = 4) => {
+const prettyBreaks = (x: number[], n = 4, formatExp = true) => {
   const [minimum, maximum] = [min(x), max(x)];
   const range = maximum - minimum;
   const unitGross = range / n;
@@ -266,6 +266,7 @@ const prettyBreaks = (x: number[], n = 4) => {
   const big = Math.abs(base) >= 3;
   const minimumNeat = Math.ceil(minimum / unitNeat) * unitNeat;
   const maximumNeat = Math.floor(maximum / unitNeat) * unitNeat;
+
   const middle = Array.from(
     Array(Math.round((maximumNeat - minimumNeat) / unitNeat - 1)),
     (_, i) => minimumNeat + (i + 1) * unitNeat
@@ -273,12 +274,12 @@ const prettyBreaks = (x: number[], n = 4) => {
   const breaks = [minimumNeat, ...middle, maximumNeat].map((e) =>
     parseFloat(e.toFixed(4))
   );
-  return big ? breaks.map((e) => e.toExponential()) : breaks;
+  return formatExp && big ? breaks.map((e) => e.toExponential()) : breaks;
 };
 
 // Finds the nearest pretty number for each
 const toPretty = (x: number[], n = 4) => {
-  const breaks = prettyBreaks(x, n);
+  const breaks = prettyBreaks(x, n, false);
   let [i, res] = [x.length, Array(x.length)];
   while (i--) {
     const x2 = breaks.map((e) => (e - x[i]) ** 2);

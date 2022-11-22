@@ -81,11 +81,11 @@ export class PlotScaleDiscrete {
       while (i--) {
         if (res.empty[i]) continue;
         const dataPct = positionValueMap.get(data[i]) as number;
-        res[i] = plotMin + (-expandMin + dataPct * unitRange) * plotRange;
+        res[i] = plotMin + (expandMin + dataPct * unitRange) * plotRange;
       }
       return res;
     }
     const dataPct = positionValueMap.get(data) as number;
-    return plotMin + (-expandMin + dataPct * unitRange) * plotRange;
+    return plotMin + (expandMin + dataPct * unitRange) * plotRange;
   };
 }

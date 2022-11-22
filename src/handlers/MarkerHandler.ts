@@ -5,6 +5,7 @@ export class MarkerHandler extends Handler {
   n: number;
   current: MembershipArray;
   past: MembershipArray;
+  updated: Int32Array;
   anyPersistent: boolean;
 
   constructor(n: number) {
@@ -12,6 +13,7 @@ export class MarkerHandler extends Handler {
     this.n = n;
     this.current = new MembershipArray(n);
     this.past = new MembershipArray(n);
+    this.updated = new Int32Array();
     this.anyPersistent = false;
   }
 
@@ -27,6 +29,8 @@ export class MarkerHandler extends Handler {
 
   updateCurrent = (at: number[], membership: dtstr.ValidMemberships) => {
     if (membership < 128 && at.length) this.anyPersistent = true;
+    this.updated = new Int32Array(new Set([...this.updated, ...at]));
+    console.log([...this.updated]);
     this.clearCurrent(true);
     this.current.update(at, membership);
     this.publish("updateCurrent");
@@ -44,6 +48,7 @@ export class MarkerHandler extends Handler {
   };
 
   clearAll = () => {
+    this.updated = new Int32Array();
     this.anyPersistent = false;
     this.current.clear();
     this.past.clear();

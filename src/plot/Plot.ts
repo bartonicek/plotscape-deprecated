@@ -20,6 +20,10 @@ export class Plot extends GraphicStack {
       | scls.AreaScaleContinuous
       | scls.LengthScaleContinuous;
   };
+
+  xExpandDirection: number;
+  yExpandDirection: number;
+
   representations: { [key: string]: reps.Representation };
   auxiliaries: {
     [key: string]: auxs.Auxiliary;
@@ -48,6 +52,8 @@ export class Plot extends GraphicStack {
     this.representations = {};
     this.wranglers = {};
     this.scales = { x: null, y: null };
+    this.xExpandDirection = 1;
+    this.yExpandDirection = 1;
     this.handlers = {
       marker: globals.marker,
       keypress: globals.keypress,
@@ -98,7 +104,7 @@ export class Plot extends GraphicStack {
 
   getUnique = (mapping: string) => {
     const arr = Object.keys(this.wranglers).map((name) =>
-      this.wranglers[name][mapping]?.extract()
+      this.wranglers[name][mapping]?.extract(1)
     );
     return Array.from(new Set(arr.flat()));
   };
@@ -138,6 +144,25 @@ export class Plot extends GraphicStack {
   };
 
   whileDrag = () => {
+    if (this.handlers.click.button === 2) {
+      const { x, y } = this.scales;
+      const { previous, end } = this.handlers.drag;
+      const { xExpandDirection, yExpandDirection } = this;
+      const [xDiff, yDiff] = [
+        ((previous[0] - end[0]) / this.width) * xExpandDirection,
+        ((previous[1] - end[1]) / this.height) * yExpandDirection,
+      ];
+
+      if (x.zero) x.expand(0, xDiff);
+      if (!x.zero) x.expand(-xDiff, xDiff);
+      if (y.zero) y.expand(0, yDiff);
+      if (!y.zero) y.expand(yDiff, -yDiff);
+
+      this.drawRedraw();
+
+      return;
+    }
+
     const { marker, drag, state } = this.handlers;
     const { highlightrects } = this.auxiliaries;
 
@@ -186,6 +211,8 @@ export class Plot extends GraphicStack {
       this.auxiliaries.highlightrects.clear();
       this.drawUser();
     }
+
+    if (event.button === 2) return;
 
     state.deactivateAll();
     this.activate();
@@ -266,6 +293,9 @@ export class Plot extends GraphicStack {
     sceneDiv.addEventListener("dblclick", doubleClick);
     sceneDiv.addEventListener("mousedown", mouseDownAnyPlot);
     containerDiv.addEventListener("mousedown", mouseDownThisPlot);
+    containerDiv.addEventListener("contextmenu", (event) =>
+      event.preventDefault()
+    );
 
     Object.keys(handlers).forEach((e) => handlers[e].subscribe(this));
   };

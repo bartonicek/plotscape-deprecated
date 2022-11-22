@@ -1,4 +1,5 @@
 import * as hndl from "handlers/handlers.js";
+import { GraphicLayer } from "./plot/GraphicLayer";
 
 type MethodsOf<Type> = Pick<
   Type,
@@ -21,7 +22,7 @@ class DataFrame {
   }
 }
 
-type ValidMappings = "x" | "y" | "size" | "fillHeight" | "_indicator";
+type ValidMappings = "x" | "y" | "size" | "fillSize" | "_indicator";
 class Mapping extends Map<ValidMappings, string> {
   constructor(...mappings: [ValidMappings, string][]) {
     super([...mappings]);
@@ -31,6 +32,14 @@ class Mapping extends Map<ValidMappings, string> {
 
 type Point = [number, number];
 type Rect2Points = [[number, number], [number, number]];
+
+type RepresentationType = {
+  boundingRects: Rect2Points[];
+  defaultize: () => void;
+  getMappings: (membership: number) => any[];
+  drawBase: (context: GraphicLayer) => void;
+  drawHighlight: (context: GraphicLayer) => void;
+};
 
 const baseMembershipArray = [1, 2, 3, 4] as const;
 const transientMembershipArray = [129, 130, 131, 132] as const;
@@ -72,6 +81,7 @@ export {
   VectorGeneric,
   ValidMappings,
   Mapping,
+  RepresentationType,
   baseMembershipArray,
   validMembershipArray,
   highlightMembershipArray,

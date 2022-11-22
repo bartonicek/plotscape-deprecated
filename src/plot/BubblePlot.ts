@@ -13,10 +13,10 @@ export class BubblePlot extends Plot {
 
     this.wranglers = {
       wrangler1: new Wrangler(data, mapping, globals.marker)
-        .splitBy("x", "y")
-        .splitWhat("size")
-        .doWithin("by", funs.unique)
-        .doWithin("what", funs.length)
+        .groupBy("x", "y")
+        .groupWhat("size")
+        .doReduce("by", funs.unique)
+        .doReduce("what", funs.length)
         .assignIndices(),
     };
 

@@ -281,7 +281,7 @@ var PLOTSCAPE = (() => {
         };
         exports.createStripePattern = createStripePattern;
         // Function to construct "pretty" breaks, inspired by R's pretty()
-        const prettyBreaks = (x, n = 4) => {
+        const prettyBreaks = (x, n = 4, formatExp = true) => {
             const [minimum, maximum] = [min(x), max(x)];
             const range = maximum - minimum;
             const unitGross = range / n;
@@ -294,12 +294,12 @@ var PLOTSCAPE = (() => {
             const maximumNeat = Math.floor(maximum / unitNeat) * unitNeat;
             const middle = Array.from(Array(Math.round((maximumNeat - minimumNeat) / unitNeat - 1)), (_, i) => minimumNeat + (i + 1) * unitNeat);
             const breaks = [minimumNeat, ...middle, maximumNeat].map((e) => parseFloat(e.toFixed(4)));
-            return big ? breaks.map((e) => e.toExponential()) : breaks;
+            return formatExp && big ? breaks.map((e) => e.toExponential()) : breaks;
         };
         exports.prettyBreaks = prettyBreaks;
         // Finds the nearest pretty number for each
         const toPretty = (x, n = 4) => {
-            const breaks = prettyBreaks(x, n);
+            const breaks = prettyBreaks(x, n, false);
             let [i, res] = [x.length, Array(x.length)];
             while (i--) {
                 const x2 = breaks.map((e) => Math.pow((e - x[i]), 2));
@@ -414,6 +414,8 @@ var PLOTSCAPE = (() => {
                 this.updateCurrent = (at, membership) => {
                     if (membership < 128 && at.length)
                         this.anyPersistent = true;
+                    this.updated = new Int32Array(new Set([...this.updated, ...at]));
+                    console.log([...this.updated]);
                     this.clearCurrent(true);
                     this.current.update(at, membership);
                     this.publish("updateCurrent");
@@ -430,6 +432,7 @@ var PLOTSCAPE = (() => {
                     this.publish("clearAll");
                 };
                 this.clearAll = () => {
+                    this.updated = new Int32Array();
                     this.anyPersistent = false;
                     this.current.clear();
                     this.past.clear();
@@ -437,6 +440,7 @@ var PLOTSCAPE = (() => {
                 this.n = n;
                 this.current = new MembershipArray(n);
                 this.past = new MembershipArray(n);
+                this.updated = new Int32Array();
                 this.anyPersistent = false;
             }
         }
@@ -614,11 +618,15 @@ var PLOTSCAPE = (() => {
                 this.startDrag = (event) => {
                     this.dragging = true;
                     this.start = [event.offsetX, event.offsetY];
+                    this.previous = [event.offsetX, event.offsetY];
                     this.publish("startDrag");
                 };
                 this.whileDrag = (event) => {
                     const { dragging, start, end } = this;
                     if (dragging) {
+                        if (this.hasDragged)
+                            this.previous = [this.end[0], this.end[1]];
+                        this.hasDragged = true;
                         this.end = [event.offsetX, event.offsetY];
                         const dist = Math.pow((start[0] - end[0]), 2) + Math.pow((start[1] - end[1]), 2);
                         if (dist > 50)
@@ -627,11 +635,17 @@ var PLOTSCAPE = (() => {
                 };
                 this.endDrag = () => {
                     this.dragging = false;
+                    this.hasDragged = false;
+                    this.start = [null, null];
+                    this.previous = [null, null];
+                    this.end = [null, null];
                     this.publish("endDrag");
                 };
                 this.container = container;
                 this.dragging = false;
+                this.hasDragged = false;
                 this.start = [null, null];
+                this.previous = [null, null];
                 this.end = [null, null];
                 this.events = ["mousedown", "mousemove", "mouseup"];
                 this.consequences = ["startDrag", "whileDrag", "endDrag"];
@@ -682,13 +696,13 @@ var PLOTSCAPE = (() => {
             },
             plot: {
                 scaleExpandFactor: 0.1,
-                backgroundColour: `#F7F7F2`,
-                marginColour: `#F7F7F2`,
+                backgroundColour: `#f7f7f2`,
+                marginColour: `#f7f7f2`,
             },
             reps: {
                 colour: [`#cccccc`, `#7fc97f`, `#fdc086`, `#beaed4`, `#386cb0`],
                 strokeColour: [null, `#7fc97f`, `#fdc086`, `#beaed4`, `#386cb0`],
-                strokeWidth: [null, null, null, null, 1],
+                strokeWidth: [null, null, null, null, null],
                 radius: [1, 1, 1, 1, 1],
                 alpha: [1, 1, 1, 1, 1],
             },
@@ -746,7 +760,270 @@ var PLOTSCAPE = (() => {
         }
         exports.SparseUint16Array = SparseUint16Array;
     });
-    define("plot/GraphicLayer", ["require", "exports", "globalparameters"], function (require, exports, globalparameters_js_1) {
+    define("wrangler/Cast", ["require", "exports", "functions", "sparsearrays"], function (require, exports, funs, sprs) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.Cast = void 0;
+        class Cast {
+            constructor(wrangler, mapping) {
+                this.extract = (membership) => {
+                    const { marker, indices, nObjects, reduceFun } = this;
+                    this.processedData.fill(null);
+                    this.processedData.empty.fill(1);
+                    let i = nObjects;
+                    if (this.allUnique) {
+                        if (membership === 1) {
+                            this.processedData.empty.fill(0);
+                            while (i--)
+                                this.processedData[i] = this.transformedData[i];
+                            return this.processedData;
+                        }
+                        while (i--) {
+                            const u = marker.updated[i];
+                            if (u === -1)
+                                break;
+                            if (marker.isOfMembership(u, membership)) {
+                                this.processedData[u] = this.transformedData[u];
+                                this.processedData.empty[u] = 0;
+                            }
+                        }
+                        return this.processedData;
+                    }
+                    let [j, subArrs] = [indices.length, Array.from(Array(nObjects), (e) => [])];
+                    while (j--) {
+                        const u = membership === 1 ? j : marker.updated[j];
+                        if (u === -1)
+                            break;
+                        if (membership === 1 || marker.isOfMembership(u, membership)) {
+                            subArrs[this.indices[u]].push(this.transformedData[u]);
+                        }
+                    }
+                    while (i--) {
+                        if (subArrs[i].length) {
+                            this.processedData[i] = reduceFun(subArrs[i]);
+                            this.processedData.empty[i] = 0;
+                        }
+                    }
+                    return this.processedData;
+                };
+                this.registerMap = (fun) => {
+                    if (!fun)
+                        return;
+                    this.mapFun = fun;
+                    return this;
+                };
+                this.registerReduce = (fun) => {
+                    if (!fun)
+                        return;
+                    this.reduceFun = fun;
+                    return this;
+                };
+                this.data = wrangler.getVariable(mapping);
+                this.marker = wrangler.marker;
+                this.indices = wrangler.indices;
+                this.allUnique = wrangler.allUnique;
+                this.nObjects = wrangler.nObjects;
+                this.emptyObjects = wrangler.emptyObjects;
+                this.processedData = new sprs.SparseArray(this.nObjects);
+                this.mapFun = funs.identity;
+                this.reduceFun = funs.identity;
+            }
+            get transformedData() {
+                if (!this._transformedData) {
+                    this._transformedData = this.mapFun(this.data);
+                }
+                return this._transformedData;
+            }
+        }
+        exports.Cast = Cast;
+    });
+    define("wrangler/Wrangler", ["require", "exports", "functions", "wrangler/Cast"], function (require, exports, funs, Cast_js_1) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.Wrangler = void 0;
+        class Wrangler {
+            constructor(data, mapping, marker) {
+                this.getVariable = (mapping) => {
+                    return this.data[this.mapping.get(mapping)];
+                };
+                this.extractAsIs = (...mappings) => {
+                    this.allUnique = true;
+                    this.indices = new Uint32Array(Array.from(Array(this.marker.n).keys()));
+                    this.nObjects = this.indices.length;
+                    this.emptyObjects = new Uint8Array(this.nObjects);
+                    mappings.forEach((mapping) => {
+                        this[mapping] = new Cast_js_1.Cast(this, mapping);
+                    });
+                    return this;
+                };
+                this.groupBy = (...mappings) => {
+                    mappings.forEach((mapping, i) => this.by.add(mapping));
+                    return this;
+                };
+                this.groupWhat = (...mappings) => {
+                    mappings.forEach((mapping) => this.what.add(mapping));
+                    return this;
+                };
+                this.doMap = (target, fun, ...args) => {
+                    const funWithArgs = (x) => fun(x, ...args);
+                    this.mapFuns.set(target, funWithArgs);
+                    return this;
+                };
+                this.doReduce = (target, fun, ...args) => {
+                    const funWithArgs = (x) => fun(x, ...args);
+                    this.reduceFuns.set(target, funWithArgs);
+                    return this;
+                };
+                this.assignIndices = () => {
+                    const { what, by, mapFuns, reduceFuns } = this;
+                    const splittingVars = Array.from(by).map((e) => {
+                        if (mapFuns.get("by")) {
+                            return mapFuns.get("by")(this.getVariable(e));
+                        }
+                        return this.getVariable(e);
+                    });
+                    const indices = funs.uniqueRowIds(splittingVars);
+                    const nObjects = Array.from(new Set(indices)).length;
+                    this.indices = new Uint32Array(indices);
+                    this.nObjects = nObjects;
+                    this.emptyObjects = new Uint8Array(this.nObjects);
+                    [...what].forEach((e) => {
+                        this[e] = new Cast_js_1.Cast(this, e);
+                        this[e].registerMap(mapFuns.get("what"));
+                        this[e].registerReduce(reduceFuns.get("what"));
+                    });
+                    [...by].forEach((e) => {
+                        this[e] = new Cast_js_1.Cast(this, e);
+                        this[e].registerMap(mapFuns.get("by"));
+                        this[e].registerReduce(reduceFuns.get("by"));
+                    });
+                    return this;
+                };
+                this.n = data[Object.keys(data)[0]].length;
+                this.allUnique = false;
+                this.data = data;
+                this.mapping = mapping;
+                this.marker = marker;
+                this.by = new Set();
+                this.what = new Set();
+                this.mapFuns = new Map();
+                this.reduceFuns = new Map();
+            }
+        }
+        exports.Wrangler = Wrangler;
+    });
+    define("representations/Representation", ["require", "exports", "datastructures", "functions", "globalparameters"], function (require, exports, dtstr, funs, globalparameters_js_1) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.Representation = void 0;
+        class Representation {
+            constructor(wrangler) {
+                this.getMapping = (membership, mapping) => {
+                    var _a;
+                    const { wrangler, scales } = this;
+                    const res = (_a = wrangler[mapping]) === null || _a === void 0 ? void 0 : _a.extract(membership, wrangler.emptyObjects);
+                    if (!res)
+                        return null;
+                    const coords = scales[mapping].dataToPlot(res, wrangler.emptyObjects);
+                    return coords;
+                };
+                this.getMappings = (membership, ...mappings) => {
+                    let [i, res] = [mappings.length, Array(mappings.length)];
+                    while (i--)
+                        res[i] = this.getMapping(membership, mappings[i]);
+                    return res;
+                };
+                this.getPars = (membership) => {
+                    if (membership === 128 && this.wrangler.marker.anyPersistent) {
+                        let pars = this.pars[this.pars.length - 1];
+                        pars = Object.assign(Object.assign({}, pars), { colour: `${pars.colour}66` });
+                        return pars;
+                    }
+                    if (membership === 128)
+                        return this.pars[this.pars.length - 1];
+                    return this.pars[(membership & ~128) - 1];
+                };
+                this.registerScales = (scales) => {
+                    this.scales = scales;
+                    return this;
+                };
+                this.defaultize = () => {
+                    this.alphaX = 1;
+                    this.sizeX = 1;
+                };
+                this.inSelection = (selectionRect) => {
+                    const { wrangler, boundingRects, selectedCases } = this;
+                    let [i, k] = [boundingRects.length, wrangler.n];
+                    while (i--) {
+                        // If the ith representation is selected...
+                        if (funs.rectOverlap(selectionRect, boundingRects[i])) {
+                            // ...append all case indices that correspond to it
+                            // to the list of the selected cases, starting from the end
+                            let j = wrangler.n;
+                            while (j--) {
+                                if (wrangler.indices[j] === i)
+                                    selectedCases[--k] = j;
+                            }
+                        }
+                    }
+                    // Return only the selected indices
+                    return selectedCases.slice(k, wrangler.n);
+                };
+                this.atClick = (clickPoint) => {
+                    const { wrangler, selectedCases, boundingRects } = this;
+                    let [i, k] = [boundingRects.length, wrangler.n];
+                    while (i--) {
+                        // If the ith representation is clicked...
+                        if (funs.pointInRect(clickPoint, boundingRects[i])) {
+                            // ...add all case indices that correspond to it
+                            // to the list of selected cases, starting from the end
+                            let j = wrangler.n;
+                            while (j--) {
+                                if (wrangler.indices[j] === i)
+                                    selectedCases[--k] = j;
+                            }
+                        }
+                    }
+                    // Return only the selected indices
+                    return selectedCases.slice(k, wrangler.n);
+                };
+                // Handle generic keypress actions
+                this.keyPressed = (key) => {
+                    const { sizeX: sizeMultiplier, sizeLim: sizeLimits, alphaX: alphaMultiplier, alphaLim: alphaLimits, } = this;
+                    if (key === "KeyR")
+                        this.defaultize();
+                    if (key === "Minus" && sizeMultiplier) {
+                        this.sizeX = funs.gatedMultiply(sizeMultiplier, 0.8, sizeLimits);
+                    }
+                    if (key === "Equal" && sizeMultiplier && sizeMultiplier < sizeLimits.max) {
+                        this.sizeX = funs.gatedMultiply(sizeMultiplier, 1.2, sizeLimits);
+                    }
+                    if (key === "BracketLeft" && alphaMultiplier) {
+                        this.alphaX = funs.gatedMultiply(alphaMultiplier, 0.8, alphaLimits);
+                    }
+                    if (key === "BracketRight" && alphaMultiplier)
+                        this.alphaX = funs.gatedMultiply(alphaMultiplier, 1.2, alphaLimits);
+                };
+                this.wrangler = wrangler;
+                this.selectedCases = new Array(wrangler.n);
+                const p = globalparameters_js_1.globalParameters.reps;
+                this.pars = dtstr.validMembershipArray.map((e) => {
+                    if (e === 128)
+                        return funs.accessIndexed(p, p.colour.length - 1);
+                    return funs.accessIndexed(p, (e & ~128) - 1);
+                });
+                this.sizeX = 1;
+                this.alphaX = 1;
+                this.sizeLim = { min: 0.2, max: 5 };
+                this.alphaLim = { min: 0.01, max: 1 };
+            }
+            get boundingRects() {
+                return [];
+            }
+        }
+        exports.Representation = Representation;
+    });
+    define("plot/GraphicLayer", ["require", "exports", "globalparameters"], function (require, exports, globalparameters_js_2) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
         exports.GraphicLayer = void 0;
@@ -778,7 +1055,7 @@ var PLOTSCAPE = (() => {
                 this.drawBackground = () => {
                     const context = this.context;
                     context.save();
-                    context.fillStyle = globalparameters_js_1.globalParameters.plot.backgroundColour;
+                    context.fillStyle = globalparameters_js_2.globalParameters.plot.backgroundColour;
                     context.fillRect(0, 0, this.width, this.height);
                     context.restore();
                 };
@@ -800,7 +1077,7 @@ var PLOTSCAPE = (() => {
                     }
                     context.restore();
                 };
-                this.drawPoints = (x, y, radius, pars = this.defaultPars, empty) => {
+                this.drawPoints = (x, y, radius, pars = this.defaultPars) => {
                     const context = this.context;
                     const { colour, strokeColour, strokeWidth, alpha } = pars;
                     context.save();
@@ -809,7 +1086,7 @@ var PLOTSCAPE = (() => {
                     context.lineWidth = strokeWidth;
                     let i = x.length;
                     while (i--) {
-                        if (x.empty[i] || y.empty[i] || radius.empty[i])
+                        if (x.empty[i])
                             continue;
                         context.beginPath();
                         context.arc(x[i], y[i], radius[i], 0, Math.PI * 2);
@@ -829,7 +1106,8 @@ var PLOTSCAPE = (() => {
                     context.lineWidth = strokeWidth;
                     let i = x.length;
                     while (i--) {
-                        // if (empty[i]) continue;
+                        if (x.empty[i])
+                            continue;
                         if (colour)
                             context.fillRect(x[i] - w[i] / 2, y[i] - h[i] / 2, h[i], w[i]);
                         if (strokeColour)
@@ -918,263 +1196,6 @@ var PLOTSCAPE = (() => {
         }
         exports.GraphicLayer = GraphicLayer;
     });
-    define("wrangler/Cast", ["require", "exports", "functions", "sparsearrays"], function (require, exports, funs, sprs) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.Cast = void 0;
-        class Cast {
-            constructor(wrangler, mapping) {
-                this.extract = (membership) => {
-                    const { marker, indices, nObjects, withinFun } = this;
-                    // this.emptyObjects.fill(0);
-                    // this.processedData.fill(0);
-                    this.processedData.fill(null);
-                    this.processedData2.empty.fill(0);
-                    let i = nObjects;
-                    if (this.allUnique) {
-                        if (!membership) {
-                            while (i--)
-                                this.processedData2[i] = this.transformedData[i];
-                            return this.processedData2;
-                        }
-                        while (i--) {
-                            if (!marker.isOfMembership(i, membership)) {
-                                this.processedData2.empty[i] = 1;
-                                continue;
-                            }
-                            this.processedData2[i] = this.transformedData[i];
-                        }
-                        return this.processedData2;
-                    }
-                    let [j, subArrs] = [indices.length, Array.from(Array(nObjects), (e) => [])];
-                    while (j--) {
-                        if (!membership || marker.isOfMembership(j, membership)) {
-                            subArrs[this.indices[j]].push(this.transformedData[j]);
-                        }
-                    }
-                    while (i--) {
-                        if (subArrs[i].length) {
-                            this.processedData2[i] = withinFun(subArrs[i]);
-                            continue;
-                        }
-                        this.processedData2.empty[i] = 1;
-                    }
-                    return this.processedData2;
-                };
-                this.registerAcross = (fun) => {
-                    if (!fun)
-                        return;
-                    this.acrossFun = fun;
-                    return this;
-                };
-                this.registerWithin = (fun) => {
-                    if (!fun)
-                        return;
-                    this.withinFun = fun;
-                    return this;
-                };
-                this.data = wrangler.getVariable(mapping);
-                this.marker = wrangler.marker;
-                this.indices = wrangler.indices;
-                this.allUnique = wrangler.allUnique;
-                this.nObjects = wrangler.nObjects;
-                this.emptyObjects = wrangler.emptyObjects;
-                this.processedData = Array(this.nObjects);
-                this.processedData2 = new sprs.SparseArray(this.nObjects);
-                this.acrossFun = funs.identity;
-                this.withinFun = funs.identity;
-            }
-            get transformedData() {
-                if (!this._transformedData) {
-                    this._transformedData = this.acrossFun(this.data);
-                }
-                return this._transformedData;
-            }
-        }
-        exports.Cast = Cast;
-    });
-    define("wrangler/Wrangler", ["require", "exports", "functions", "wrangler/Cast"], function (require, exports, funs, Cast_js_1) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.Wrangler = void 0;
-        class Wrangler {
-            constructor(data, mapping, marker) {
-                this.getVariable = (mapping) => {
-                    return this.data[this.mapping.get(mapping)];
-                };
-                this.extractAsIs = (...mappings) => {
-                    this.allUnique = true;
-                    this.indices = new Uint32Array(Array.from(Array(this.marker.n).keys()));
-                    this.nObjects = this.indices.length;
-                    this.emptyObjects = new Uint8Array(this.nObjects);
-                    mappings.forEach((mapping) => {
-                        this[mapping] = new Cast_js_1.Cast(this, mapping);
-                    });
-                    return this;
-                };
-                this.splitBy = (...mappings) => {
-                    mappings.forEach((mapping, i) => this.by.add(mapping));
-                    return this;
-                };
-                this.splitWhat = (...mappings) => {
-                    mappings.forEach((mapping) => this.what.add(mapping));
-                    return this;
-                };
-                this.doAcross = (target, fun, ...args) => {
-                    const funWithArgs = (x) => fun(x, ...args);
-                    this.acrossFuns.set(target, funWithArgs);
-                    return this;
-                };
-                this.doWithin = (target, fun, ...args) => {
-                    const funWithArgs = (x) => fun(x, ...args);
-                    this.withinFuns.set(target, funWithArgs);
-                    return this;
-                };
-                this.assignIndices = () => {
-                    const { what, by, acrossFuns, withinFuns, acrossArgs, withinArgs } = this;
-                    const splittingVars = Array.from(by).map((e) => {
-                        if (acrossFuns.get("by")) {
-                            return acrossFuns.get("by")(this.getVariable(e));
-                        }
-                        return this.getVariable(e);
-                    });
-                    const indices = funs.uniqueRowIds(splittingVars);
-                    const nObjects = Array.from(new Set(indices)).length;
-                    this.indices = new Uint32Array(indices);
-                    this.nObjects = nObjects;
-                    this.emptyObjects = new Uint8Array(this.nObjects);
-                    [...what].forEach((e) => {
-                        this[e] = new Cast_js_1.Cast(this, e);
-                        this[e].registerAcross(acrossFuns.get("what"));
-                        this[e].registerWithin(withinFuns.get("what"));
-                    });
-                    [...by].forEach((e) => {
-                        this[e] = new Cast_js_1.Cast(this, e);
-                        this[e].registerAcross(acrossFuns.get("by"));
-                        this[e].registerWithin(withinFuns.get("by"));
-                    });
-                    return this;
-                };
-                this.n = data[Object.keys(data)[0]].length;
-                this.allUnique = false;
-                this.data = data;
-                this.mapping = mapping;
-                this.marker = marker;
-                this.by = new Set();
-                this.what = new Set();
-                this.acrossFuns = new Map();
-                this.withinFuns = new Map();
-            }
-        }
-        exports.Wrangler = Wrangler;
-    });
-    define("representations/Representation", ["require", "exports", "datastructures", "functions", "globalparameters"], function (require, exports, dtstr, funs, globalparameters_js_2) {
-        "use strict";
-        Object.defineProperty(exports, "__esModule", { value: true });
-        exports.Representation = void 0;
-        class Representation {
-            constructor(wrangler) {
-                this.getMapping = (mapping, membership) => {
-                    var _a;
-                    const { wrangler, scales } = this;
-                    const res = (_a = wrangler[mapping]) === null || _a === void 0 ? void 0 : _a.extract(membership, wrangler.emptyObjects);
-                    if (!res)
-                        return [];
-                    const coords = scales[mapping].dataToPlot(res, wrangler.emptyObjects);
-                    return coords;
-                };
-                this.getPars = (membership) => {
-                    if (membership === 128 && this.wrangler.marker.anyPersistent) {
-                        let pars = this.pars[this.pars.length - 1];
-                        pars = Object.assign(Object.assign({}, pars), { colour: `${pars.colour}66` });
-                        return pars;
-                    }
-                    if (membership === 128)
-                        return this.pars[this.pars.length - 1];
-                    return this.pars[(membership & ~128) - 1];
-                };
-                this.drawBase = (context) => { };
-                this.drawHighlight = (context) => { };
-                this.registerScales = (scales) => {
-                    this.scales = scales;
-                    return this;
-                };
-                this.defaultize = () => {
-                    this.alphaMultiplier = 1;
-                    this.sizeMultiplier = 1;
-                };
-                this.inSelection = (selectionRect) => {
-                    const { wrangler, boundingRects, selectedCases } = this;
-                    let [i, k] = [boundingRects.length, wrangler.n];
-                    while (i--) {
-                        // If the ith representation is selected...
-                        if (funs.rectOverlap(selectionRect, boundingRects[i])) {
-                            // ...append all case indices that correspond to it
-                            // to the list of the selected cases, starting from the end
-                            let j = wrangler.n;
-                            while (j--) {
-                                if (wrangler.indices[j] === i)
-                                    selectedCases[--k] = j;
-                            }
-                        }
-                    }
-                    // Return only the selected indices
-                    return selectedCases.slice(k, wrangler.n);
-                };
-                this.atClick = (clickPoint) => {
-                    const { wrangler, selectedCases, boundingRects } = this;
-                    let [i, k] = [boundingRects.length, wrangler.n];
-                    while (i--) {
-                        // If the ith representation is clicked...
-                        if (funs.pointInRect(clickPoint, boundingRects[i])) {
-                            // ...add all case indices that correspond to it
-                            // to the list of selected cases, starting from the end
-                            let j = wrangler.n;
-                            while (j--) {
-                                if (wrangler.indices[j] === i)
-                                    selectedCases[--k] = j;
-                            }
-                        }
-                    }
-                    // Return only the selected indices
-                    return selectedCases.slice(k, wrangler.n);
-                };
-                // Handle generic keypress actions
-                this.keyPressed = (key) => {
-                    const { sizeMultiplier, sizeLimits, alphaMultiplier, alphaLimits } = this;
-                    if (key === "KeyR")
-                        this.defaultize();
-                    if (key === "Minus" && sizeMultiplier) {
-                        this.sizeMultiplier = funs.gatedMultiply(sizeMultiplier, 0.8, sizeLimits);
-                    }
-                    if (key === "Equal" && sizeMultiplier && sizeMultiplier < sizeLimits.max) {
-                        this.sizeMultiplier = funs.gatedMultiply(sizeMultiplier, 1.2, sizeLimits);
-                    }
-                    if (key === "BracketLeft" && alphaMultiplier) {
-                        this.alphaMultiplier = funs.gatedMultiply(alphaMultiplier, 0.8, alphaLimits);
-                    }
-                    if (key === "BracketRight" && alphaMultiplier)
-                        this.alphaMultiplier = funs.gatedMultiply(alphaMultiplier, 1.2, alphaLimits);
-                };
-                this.wrangler = wrangler;
-                this.selectedCases = new Array(wrangler.n);
-                const p = globalparameters_js_2.globalParameters.reps;
-                this.pars = dtstr.validMembershipArray.map((e) => {
-                    if (e === 128)
-                        return funs.accessIndexed(p, p.colour.length - 1);
-                    return funs.accessIndexed(p, (e & ~128) - 1);
-                });
-                this.sizeMultiplier = 1;
-                this.alphaMultiplier = 1;
-                this.sizeLimits = { min: 0.2, max: 5 };
-                this.alphaLimits = { min: 0.01, max: 1 };
-            }
-            get boundingRects() {
-                return [];
-            }
-        }
-        exports.Representation = Representation;
-    });
     define("representations/Bars", ["require", "exports", "datastructures", "sparsearrays", "representations/Representation"], function (require, exports, dtstr, sprs, Representation_js_1) {
         "use strict";
         Object.defineProperty(exports, "__esModule", { value: true });
@@ -1183,56 +1204,51 @@ var PLOTSCAPE = (() => {
             constructor(wrangler, widthMultiplier) {
                 super(wrangler);
                 this.defaultize = () => {
-                    this.sizeMultiplier = this.widthMultiplier;
-                    this.alphaMultiplier = 1;
-                };
-                this.getMappings = (membership) => {
-                    const mappings = ["x", "y"];
-                    const res = mappings.map((e) => this.getMapping(e, membership));
-                    return [...res, this.wrangler.emptyObjects];
+                    this.sizeX = this.widthMultiplier;
+                    this.alphaX = 1;
                 };
                 this.drawBase = (context) => {
-                    const { y0Default, widthDefault, alphaMultiplier } = this;
-                    const [x, y] = this.getMappings(1);
-                    const y0 = new sprs.SparseUint16Array(x.length).fill(y0Default);
-                    const width = new sprs.SparseUint16Array(x.length).fill(widthDefault);
-                    const pars = Object.assign(Object.assign({}, this.getPars(1)), { alpha: alphaMultiplier });
+                    const { y0D, widthD, alphaX } = this;
+                    const [x, y] = this.getMappings(1, "x", "y");
+                    const y0 = new sprs.SparseUint16Array(x.length).fill(y0D);
+                    const width = new sprs.SparseUint16Array(x.length).fill(widthD);
+                    const pars = Object.assign(Object.assign({}, this.getPars(1)), { alpha: alphaX });
                     context.drawBarsV(x, y0, y, width, pars);
                 };
                 this.drawHighlight = (context) => {
                     dtstr.highlightMembershipArray.forEach((e) => {
-                        const { y0Default, widthDefault } = this;
-                        const [x, y] = this.getMappings(e);
+                        const { y0D, widthD } = this;
+                        const [x, y] = this.getMappings(e, "x", "y");
                         if (!(x.length > 0))
                             return;
-                        const y0 = new sprs.SparseUint16Array(x.length).fill(y0Default);
-                        const width = new sprs.SparseUint16Array(x.length).fill(widthDefault);
+                        const y0 = new sprs.SparseUint16Array(x.length).fill(y0D);
+                        const width = new sprs.SparseUint16Array(x.length).fill(widthD);
                         const pars = Object.assign(Object.assign({}, this.getPars(e)), { alpha: 1 });
                         context.drawBarsV(x, y0, y, width, pars);
                     });
                 };
                 this.widthMultiplier = widthMultiplier;
-                this.sizeMultiplier = widthMultiplier;
-                this.sizeLimits = { min: 0.01, max: 1 };
+                this.sizeX = widthMultiplier;
+                this.sizeLim = { min: 0.01, max: 1 };
             }
-            get y0Default() {
+            get y0D() {
                 return this.scales.y.plotMin;
             }
-            get widthDefault() {
+            get widthD() {
                 if (!this.scales.x.continuous) {
-                    return this.scales.x.breakWidth * this.sizeMultiplier;
+                    return this.scales.x.breakWidth * this.sizeX;
                 }
-                const x = this.getMapping("x").sort((a, b) => a - b);
-                return Math.floor(this.sizeMultiplier * (x[1] - x[0]));
+                const x = this.getMapping(1, "x").sort((a, b) => a - b);
+                return Math.floor(this.sizeX * (x[1] - x[0]));
             }
             get boundingRects() {
-                const [x, y] = this.getMappings(1);
-                const [wd, y0d] = [this.widthDefault / 2, this.y0Default];
+                const [x, y] = this.getMappings(1, "x", "y");
+                const [widthD, y0d] = [this.widthD, this.y0D];
                 let [i, res] = [x.length, Array(x.length)];
                 while (i--) {
                     res[i] = [
-                        [x[i] - wd, y0d],
-                        [x[i] + wd, y[i]],
+                        [x[i] - widthD / 2, y0d],
+                        [x[i] + widthD / 2, y[i]],
                     ];
                 }
                 return res;
@@ -1247,51 +1263,51 @@ var PLOTSCAPE = (() => {
         class Points extends Representation_js_2.Representation {
             constructor(wrangler) {
                 super(wrangler);
-                this.getMappings = (membership) => {
-                    const { getMapping, getPars, defaultRadius, sizeMultiplier } = this;
-                    const mappings = ["x", "y", "size"];
-                    let [x, y, size] = mappings.map((e) => getMapping(e, membership));
-                    const radius = getPars(membership).radius;
-                    if (!this.hasSize) {
-                        size = new sprs.SparseUint16Array(x.length).fill(radius * defaultRadius * sizeMultiplier);
-                        return [x, y, size];
-                    }
-                    size = size.map((e) => e * radius * defaultRadius * sizeMultiplier);
-                    return [x, y, size];
-                };
                 this.drawBase = (context) => {
-                    const [x, y, size] = this.getMappings(1);
-                    const pars = Object.assign(Object.assign({}, this.getPars(1)), { alpha: this.alphaMultiplier });
-                    context.drawPoints(x, y, size, pars, this.wrangler.emptyObjects);
+                    let [x, y, s] = this.getMappings(1, "x", "y", "size");
+                    const pars = Object.assign(Object.assign({}, this.getPars(1)), { alpha: this.alphaX });
+                    const { radiusD, sizeX } = this;
+                    let [i, s2] = [x.length, new sprs.SparseUint16Array(x.length)];
+                    // If size is a mapping, scale it, otherwise fill with default size
+                    while (i--)
+                        s2[i] = (s ? s[i] : 1) * pars.radius * radiusD * sizeX;
+                    context.drawPoints(x, y, s2, pars);
                 };
                 this.drawHighlight = (context) => {
                     dtstr.highlightMembershipArray.forEach((e) => {
-                        const [x, y, size] = this.getMappings(e);
+                        let [x, y, s] = this.getMappings(e, "x", "y", "size");
                         if (!(x.length > 0))
                             return;
                         const pars = Object.assign(Object.assign({}, this.getPars(e)), { alpha: 1 });
-                        context.drawPoints(x, y, size, pars, this.wrangler.emptyObjects);
+                        const { radiusD, sizeX } = this;
+                        let [i, s2] = [x.length, new sprs.SparseUint16Array(x.length)];
+                        while (i--)
+                            s2[i] = (s ? s[i] : 1) * pars.radius * radiusD * sizeX;
+                        context.drawPoints(x, y, s2, pars);
                     });
                 };
                 this.hasSize = !!wrangler.mapping.get("size");
             }
-            get defaultRadius() {
+            get radiusD() {
                 const { x, y } = this.scales;
                 if (!x.continuous && !y.continuous) {
                     return Math.min(x.breakWidth, y.breakWidth) / Math.sqrt(Math.PI);
                 }
-                const length = Math.min(...[x, y].map((e) => Math.abs(e.plotRange)));
+                const l = Math.min(Math.abs(x.plotRange), Math.abs(y.plotRange));
                 const c = 10 * Math.log(this.wrangler.n);
-                return length / c;
+                return l / c;
             }
             get boundingRects() {
-                const [x, y, size] = this.getMappings(1);
+                let [x, y, s] = this.getMappings(1, "x", "y", "size");
+                const { pars, radiusD, sizeX } = this;
+                const s2 = new sprs.SparseUint16Array(x.length);
                 const c = 1 / Math.sqrt(2);
                 let [i, res] = [x.length, Array(x.length)];
                 while (i--) {
+                    s2[i] = (s ? s[i] : 1) * pars[0].radius * radiusD * sizeX;
                     res[i] = [
-                        [x[i] - c * size[i], y[i] - c * size[i]],
-                        [x[i] + c * size[i], y[i] + c * size[i]],
+                        [x[i] - c * s2[i], y[i] - c * s2[i]],
+                        [x[i] + c * s2[i], y[i] + c * s2[i]],
                     ];
                 }
                 return res;
@@ -1306,30 +1322,18 @@ var PLOTSCAPE = (() => {
         class Squares extends Representation_js_3.Representation {
             constructor(wrangler) {
                 super(wrangler);
-                this.getMappings = (membership) => {
-                    const { getMapping, defaultSize, sizeMultiplier } = this;
-                    const mappings = ["x", "y", "size", "fillHeight"];
-                    let [x, y, size, fillHeight] = mappings.map((e) => getMapping(e, membership));
-                    if (!size.length) {
-                        size = new sprs.SparseUint16Array(x.length).fill(defaultSize * sizeMultiplier);
-                        return [x, y, size, fillHeight];
-                    }
-                    let i = size.length;
-                    while (i--) {
-                        size[i] *= defaultSize * sizeMultiplier;
-                        fillHeight[i] *= defaultSize * sizeMultiplier;
-                    }
-                    return [x, y, size, fillHeight];
-                };
                 this.drawBase = (context) => {
-                    let [x, y, size] = this.getMappings(1);
+                    let [x, y, size] = this.getMappings(1, "x", "y", "size");
                     if (!x)
                         return;
-                    const pars = Object.assign(Object.assign({}, this.getPars(1)), { alpha: this.alphaMultiplier });
+                    const pars = Object.assign(Object.assign({}, this.getPars(1)), { alpha: this.alphaX });
+                    const { sizeD: defaultSize, sizeX } = this;
                     let i = x.length;
                     const y0 = new sprs.SparseUint16Array(x.length);
                     const y1 = new sprs.SparseUint16Array(x.length);
                     while (i--) {
+                        // Scale size
+                        size[i] = size[i] * defaultSize * sizeX;
                         y0[i] = y[i] + size[i] / 2;
                         y1[i] = y[i] - size[i] / 2;
                     }
@@ -1337,38 +1341,45 @@ var PLOTSCAPE = (() => {
                 };
                 this.drawHighlight = (context) => {
                     dtstr.highlightMembershipArray.forEach((e) => {
-                        const [x, y, size, fillHeight] = this.getMappings(e);
-                        const [, , sizeBase, fillHeightBase] = this.getMappings(1);
+                        const [x, y, fillSize] = this.getMappings(e, "x", "y", "fillSize");
+                        const [sizeBase, fillSizeBase] = this.getMappings(1, "size", "fillSize");
                         if (!x)
                             return;
                         const pars = Object.assign(Object.assign({}, this.getPars(e)), { alpha: 1 });
+                        const { sizeD, sizeX } = this;
                         let i = x.length;
                         const y0 = new sprs.SparseUint16Array(x.length);
                         const y1 = new sprs.SparseUint16Array(x.length);
                         while (i--) {
-                            const c = fillHeight[i] / fillHeightBase[i];
+                            // Scale size and fillsize (height)
+                            sizeBase[i] = sizeBase[i] * sizeD * sizeX;
+                            fillSize[i] = (fillSize[i] / fillSizeBase[i]) * sizeBase[i];
                             y0[i] = y[i] + sizeBase[i] / 2;
-                            y1[i] = y[i] + sizeBase[i] / 2 - c * size[i];
+                            y1[i] = y[i] + sizeBase[i] / 2 - fillSize[i];
                         }
                         context.drawBarsV(x, y0, y1, sizeBase, pars);
                     });
                 };
-                this.sizeLimits = { min: 0.01, max: 1.5 };
+                this.sizeLim = { min: 0.01, max: 1.5 };
             }
-            get defaultSize() {
+            // Default size
+            get sizeD() {
                 const { x, y } = this.scales;
                 if (x.breakWidth && y.breakWidth) {
                     return Math.min(x.breakWidth, y.breakWidth);
                 }
-                return (Math.abs(Math.min(x.plotRange, y.plotRange)) / this.wrangler.nObjects);
+                return (Math.min(Math.abs(x.plotRange), Math.abs(y.plotRange)) /
+                    this.wrangler.nObjects);
             }
             get boundingRects() {
-                const [x, y, size] = this.getMappings();
+                const [x, y, s2] = this.getMappings(1, "x", "y", "size");
+                const { sizeD, sizeX } = this;
                 let [i, res] = [x.length, Array(x.length)];
                 while (i--) {
+                    s2[i] = s2[i] * sizeD * sizeX;
                     res[i] = [
-                        [x[i] - size[i] / 2, y[i] - size[i] / 2],
-                        [x[i] + size[i] / 2, y[i] + size[i] / 2],
+                        [x[i] - s2[i] / 2, y[i] - s2[i] / 2],
+                        [x[i] + s2[i] / 2, y[i] + s2[i] / 2],
                     ];
                 }
                 return res;
@@ -1500,12 +1511,12 @@ var PLOTSCAPE = (() => {
                             if (res.empty[i])
                                 continue;
                             const dataPct = positionValueMap.get(data[i]);
-                            res[i] = plotMin + (-expandMin + dataPct * unitRange) * plotRange;
+                            res[i] = plotMin + (expandMin + dataPct * unitRange) * plotRange;
                         }
                         return res;
                     }
                     const dataPct = positionValueMap.get(data);
-                    return plotMin + (-expandMin + dataPct * unitRange) * plotRange;
+                    return plotMin + (expandMin + dataPct * unitRange) * plotRange;
                 };
                 this.continuous = false;
                 this.plotMin = 0;
@@ -1707,10 +1718,11 @@ var PLOTSCAPE = (() => {
                 this.nbreaks = nbreaks !== null && nbreaks !== void 0 ? nbreaks : 4;
             }
             get dataBreaks() {
-                if (this.scales[this.along].continuous) {
-                    return funs.prettyBreaks(this.scales[this.along].dataRepresentation, this.nbreaks);
+                const { scales, along, nbreaks } = this;
+                if (scales[along].continuous) {
+                    return funs.prettyBreaks(scales[along].dataRepresentation, nbreaks);
                 }
-                return this.scales[this.along].dataRepresentation;
+                return scales[along].dataRepresentation;
             }
             get breaks() {
                 return this.scales[this.along].dataToPlot(this.dataBreaks);
@@ -1897,7 +1909,7 @@ var PLOTSCAPE = (() => {
                     this.handlers.state.activate(this.id);
                 };
                 this.getUnique = (mapping) => {
-                    const arr = Object.keys(this.wranglers).map((name) => { var _a; return (_a = this.wranglers[name][mapping]) === null || _a === void 0 ? void 0 : _a.extract(); });
+                    const arr = Object.keys(this.wranglers).map((name) => { var _a; return (_a = this.wranglers[name][mapping]) === null || _a === void 0 ? void 0 : _a.extract(1); });
                     return Array.from(new Set(arr.flat()));
                 };
                 this.inSelection = (selPoints) => {
@@ -1933,6 +1945,25 @@ var PLOTSCAPE = (() => {
                     highlightrects.updateCurrentOrigin(drag.start);
                 };
                 this.whileDrag = () => {
+                    if (this.handlers.click.button === 2) {
+                        const { x, y } = this.scales;
+                        const { previous, end } = this.handlers.drag;
+                        const { xExpandDirection, yExpandDirection } = this;
+                        const [xDiff, yDiff] = [
+                            ((previous[0] - end[0]) / this.width) * xExpandDirection,
+                            ((previous[1] - end[1]) / this.height) * yExpandDirection,
+                        ];
+                        if (x.zero)
+                            x.expand(0, xDiff);
+                        if (!x.zero)
+                            x.expand(-xDiff, xDiff);
+                        if (y.zero)
+                            y.expand(0, yDiff);
+                        if (!y.zero)
+                            y.expand(yDiff, -yDiff);
+                        this.drawRedraw();
+                        return;
+                    }
                     const { marker, drag, state } = this.handlers;
                     const { highlightrects } = this.auxiliaries;
                     highlightrects.updateCurrentEndpoint(drag.end);
@@ -1971,6 +2002,8 @@ var PLOTSCAPE = (() => {
                         this.auxiliaries.highlightrects.clear();
                         this.drawUser();
                     }
+                    if (event.button === 2)
+                        return;
                     state.deactivateAll();
                     this.activate();
                     marker.updateCurrent(this.inClickPosition(click.positionLast), state.membership);
@@ -2024,12 +2057,15 @@ var PLOTSCAPE = (() => {
                     sceneDiv.addEventListener("dblclick", doubleClick);
                     sceneDiv.addEventListener("mousedown", mouseDownAnyPlot);
                     containerDiv.addEventListener("mousedown", mouseDownThisPlot);
+                    containerDiv.addEventListener("contextmenu", (event) => event.preventDefault());
                     Object.keys(handlers).forEach((e) => handlers[e].subscribe(this));
                 };
                 this.id = id;
                 this.representations = {};
                 this.wranglers = {};
                 this.scales = { x: null, y: null };
+                this.xExpandDirection = 1;
+                this.yExpandDirection = 1;
                 this.handlers = {
                     marker: globals.marker,
                     keypress: globals.keypress,
@@ -2194,10 +2230,10 @@ var PLOTSCAPE = (() => {
                 super(plotConfig);
                 this.wranglers = {
                     wrangler1: new Wrangler_js_2.Wrangler(data, mapping, globals.marker)
-                        .splitBy("x", "y")
-                        .splitWhat("size")
-                        .doWithin("by", funs.unique)
-                        .doWithin("what", funs.length)
+                        .groupBy("x", "y")
+                        .groupWhat("size")
+                        .doReduce("by", funs.unique)
+                        .doReduce("what", funs.length)
                         .assignIndices(),
                 };
                 this.scales = {
@@ -2223,16 +2259,17 @@ var PLOTSCAPE = (() => {
                 super(plotConfig);
                 this.wranglers = {
                     wrangler1: new Wrangler_js_3.Wrangler(data, mapping, globals.marker)
-                        .splitBy("x")
-                        .splitWhat("y")
-                        .doWithin("by", funs.unique)
-                        .doWithin("what", funs.sum)
+                        .groupBy("x")
+                        .groupWhat("y")
+                        .doReduce("by", funs.unique)
+                        .doReduce("what", funs.sum)
                         .assignIndices(),
                 };
                 this.scales = {
                     x: new scls.PlotScaleDiscrete(),
                     y: new scls.PlotScaleContinuous(true),
                 };
+                this.yExpandDirection = -1;
                 this.representations = {
                     bars: new reps.Bars(this.wranglers.wrangler1, 0.8),
                 };
@@ -2251,17 +2288,18 @@ var PLOTSCAPE = (() => {
                 super(plotConfig);
                 this.wranglers = {
                     wrangler1: new Wrangler_js_4.Wrangler(data, mapping, globals.marker)
-                        .splitBy("x")
-                        .splitWhat("y")
-                        .doAcross("by", funs.bin, 10)
-                        .doWithin("by", funs.unique)
-                        .doWithin("what", funs.sum)
+                        .groupBy("x")
+                        .groupWhat("y")
+                        .doMap("by", funs.bin, 10)
+                        .doReduce("by", funs.unique)
+                        .doReduce("what", funs.sum)
                         .assignIndices(),
                 };
                 this.scales = {
                     x: new scls.PlotScaleContinuous(),
                     y: new scls.PlotScaleContinuous(true),
                 };
+                this.yExpandDirection = -1;
                 this.representations = {
                     bars: new reps.Bars(this.wranglers.wrangler1, 1),
                 };
@@ -2279,22 +2317,22 @@ var PLOTSCAPE = (() => {
                 const { data, mapping, globals } = plotConfig;
                 if (!mapping.has("size"))
                     mapping.set("size", "_indicator");
-                if (!mapping.has("fillHeight"))
-                    mapping.set("fillHeight", "_indicator");
+                if (!mapping.has("fillSize"))
+                    mapping.set("fillSize", "_indicator");
                 super(plotConfig);
                 this.wranglers = {
                     wrangler1: new Wrangler_js_5.Wrangler(data, mapping, globals.marker)
-                        .splitBy("x", "y")
-                        .splitWhat("size", "fillHeight")
-                        .doWithin("by", funs.unique)
-                        .doWithin("what", funs.sum)
+                        .groupBy("x", "y")
+                        .groupWhat("size", "fillSize")
+                        .doReduce("by", funs.unique)
+                        .doReduce("what", funs.sum)
                         .assignIndices(),
                 };
                 this.scales = {
                     x: new scls.PlotScaleDiscrete(),
                     y: new scls.PlotScaleDiscrete(),
                     size: new scls.AreaScaleContinuous(),
-                    fillHeight: new scls.LengthScaleContinuous(),
+                    fillSize: new scls.LengthScaleContinuous(),
                 };
                 this.representations = {
                     squares: new reps.Squares(this.wranglers.wrangler1),
@@ -2313,23 +2351,23 @@ var PLOTSCAPE = (() => {
                 const { data, mapping, globals } = plotConfig;
                 if (!mapping.has("size"))
                     mapping.set("size", "_indicator");
-                if (!mapping.has("fillHeight"))
-                    mapping.set("fillHeight", "_indicator");
+                if (!mapping.has("fillSize"))
+                    mapping.set("fillSize", "_indicator");
                 super(plotConfig);
                 this.wranglers = {
                     wrangler1: new Wrangler_js_6.Wrangler(data, mapping, globals.marker)
-                        .splitBy("x", "y")
-                        .splitWhat("size", "fillHeight")
-                        .doAcross("by", funs.toPretty, 10)
-                        .doWithin("by", funs.unique)
-                        .doWithin("what", funs.sum)
+                        .groupBy("x", "y")
+                        .groupWhat("size", "fillSize")
+                        .doMap("by", funs.toPretty, 10)
+                        .doReduce("by", funs.unique)
+                        .doReduce("what", funs.sum)
                         .assignIndices(),
                 };
                 this.scales = {
                     x: new scls.PlotScaleContinuous(),
                     y: new scls.PlotScaleContinuous(),
                     size: new scls.AreaScaleContinuous(),
-                    fillHeight: new scls.LengthScaleContinuous(),
+                    fillSize: new scls.LengthScaleContinuous(),
                 };
                 this.representations = {
                     squares: new reps.Squares(this.wranglers.wrangler1),

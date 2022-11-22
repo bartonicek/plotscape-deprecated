@@ -12,11 +12,11 @@ export class HistoPlot extends Plot {
 
     this.wranglers = {
       wrangler1: new Wrangler(data, mapping, globals.marker)
-        .splitBy("x")
-        .splitWhat("y")
-        .doAcross("by", funs.bin, 10)
-        .doWithin("by", funs.unique)
-        .doWithin("what", funs.sum)
+        .groupBy("x")
+        .groupWhat("y")
+        .doMap("by", funs.bin, 10)
+        .doReduce("by", funs.unique)
+        .doReduce("what", funs.sum)
         .assignIndices(),
     };
 
@@ -24,6 +24,8 @@ export class HistoPlot extends Plot {
       x: new scls.PlotScaleContinuous(),
       y: new scls.PlotScaleContinuous(true),
     };
+
+    this.yExpandDirection = -1;
 
     this.representations = {
       bars: new reps.Bars(this.wranglers.wrangler1, 1),

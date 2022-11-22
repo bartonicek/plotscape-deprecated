@@ -16,10 +16,8 @@ export class Wrangler {
   nObjects: number;
   emptyObjects: Uint8Array;
 
-  acrossFuns: Map<dtstr.ValidMappings | "by" | "what", Function>;
-  acrossArgs: Map<dtstr.ValidMappings | "by" | "what", any[]>;
-  withinFuns: Map<dtstr.ValidMappings | "by" | "what", Function>;
-  withinArgs: Map<dtstr.ValidMappings | "by" | "what", any[]>;
+  mapFuns: Map<dtstr.ValidMappings | "by" | "what", Function>;
+  reduceFuns: Map<dtstr.ValidMappings | "by" | "what", Function>;
 
   constructor(
     data: dtstr.DataFrame,
@@ -34,8 +32,8 @@ export class Wrangler {
     this.by = new Set();
     this.what = new Set();
 
-    this.acrossFuns = new Map();
-    this.withinFuns = new Map();
+    this.mapFuns = new Map();
+    this.reduceFuns = new Map();
   }
 
   getVariable = (mapping: dtstr.ValidMappings) => {
@@ -54,41 +52,41 @@ export class Wrangler {
     return this;
   };
 
-  splitBy = (...mappings: dtstr.ValidMappings[]) => {
+  groupBy = (...mappings: dtstr.ValidMappings[]) => {
     mappings.forEach((mapping, i) => this.by.add(mapping));
     return this;
   };
 
-  splitWhat = (...mappings: dtstr.ValidMappings[]) => {
+  groupWhat = (...mappings: dtstr.ValidMappings[]) => {
     mappings.forEach((mapping) => this.what.add(mapping));
     return this;
   };
 
-  doAcross = (
+  doMap = (
     target: dtstr.ValidMappings | "by" | "what",
-    fun: Function,
+    fun: (x: any[], ...args: any[]) => any[],
     ...args: any[]
   ) => {
     const funWithArgs = (x: any[]) => fun(x, ...args);
-    this.acrossFuns.set(target, funWithArgs);
+    this.mapFuns.set(target, funWithArgs);
     return this;
   };
 
-  doWithin = (
+  doReduce = (
     target: dtstr.ValidMappings | "by" | "what",
-    fun: Function,
+    fun: (x: any[], ...args: any[]) => number | string | boolean,
     ...args: any[]
   ) => {
     const funWithArgs = (x: any[]) => fun(x, ...args);
-    this.withinFuns.set(target, funWithArgs);
+    this.reduceFuns.set(target, funWithArgs);
     return this;
   };
 
   assignIndices = () => {
-    const { what, by, acrossFuns, withinFuns, acrossArgs, withinArgs } = this;
+    const { what, by, mapFuns, reduceFuns } = this;
     const splittingVars = Array.from(by).map((e) => {
-      if (acrossFuns.get("by")) {
-        return acrossFuns.get("by")(this.getVariable(e));
+      if (mapFuns.get("by")) {
+        return mapFuns.get("by")(this.getVariable(e));
       }
       return this.getVariable(e);
     });
@@ -102,14 +100,14 @@ export class Wrangler {
 
     [...what].forEach((e) => {
       this[e] = new Cast(this, e);
-      this[e].registerAcross(acrossFuns.get("what"));
-      this[e].registerWithin(withinFuns.get("what"));
+      this[e].registerMap(mapFuns.get("what"));
+      this[e].registerReduce(reduceFuns.get("what"));
     });
 
     [...by].forEach((e) => {
       this[e] = new Cast(this, e);
-      this[e].registerAcross(acrossFuns.get("by"));
-      this[e].registerWithin(withinFuns.get("by"));
+      this[e].registerMap(mapFuns.get("by"));
+      this[e].registerReduce(reduceFuns.get("by"));
     });
 
     return this;
