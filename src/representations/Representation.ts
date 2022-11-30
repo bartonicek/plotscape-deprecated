@@ -10,7 +10,6 @@ export class Representation {
   plotDims: { width: number; height: number };
   scales: { [key: string]: any };
   pars: RepParsWide;
-  pattern: CanvasPattern;
 
   sizeX: number;
   sizeLim: { min: number; max: number };
@@ -19,7 +18,7 @@ export class Representation {
 
   constructor(wrangler: Wrangler) {
     this.wrangler = wrangler;
-    this.selectedCases = new Array(wrangler.n);
+    this.selectedCases = new Array(wrangler.nCases);
 
     const p = globalParameters.reps;
     this.pars = dtstr.validMembershipArray.map((e) => {
@@ -41,9 +40,9 @@ export class Representation {
     mapping: dtstr.ValidMappings
   ) => {
     const { wrangler, scales } = this;
-    const res = wrangler[mapping]?.extract(membership, wrangler.emptyObjects);
+    const res = wrangler[mapping]?.extract(membership);
     if (!res) return null;
-    const coords = scales[mapping].dataToPlot(res, wrangler.emptyObjects);
+    const coords = scales[mapping].dataToPlot(res);
     return coords;
   };
 
@@ -79,41 +78,39 @@ export class Representation {
 
   inSelection = (selectionRect: dtstr.Rect2Points) => {
     const { wrangler, boundingRects, selectedCases } = this;
-    let [i, k] = [boundingRects.length, wrangler.n];
+    let [i, k] = [boundingRects.length, wrangler.nCases];
     while (i--) {
-      // If the ith representation is selected...
+      // If the ith graphical object is selected...
       if (funs.rectOverlap(selectionRect, boundingRects[i])) {
-        // ...append all case indices that correspond to it
-        // to the list of the selected cases, starting from the end
-        let j = wrangler.n;
+        // ...append all corresponding case indices
+        // to the list of the selected cases, starting from end
+        let j = wrangler.nCases;
         while (j--) {
           if (wrangler.indices[j] === i) selectedCases[--k] = j;
         }
       }
     }
-
-    // Return only the selected indices
-    return selectedCases.slice(k, wrangler.n);
+    // Shorten the array if some objects were not selected
+    return selectedCases.slice(k, wrangler.nCases);
   };
 
   atClick = (clickPoint: [number, number]) => {
     const { wrangler, selectedCases, boundingRects } = this;
 
-    let [i, k] = [boundingRects.length, wrangler.n];
+    let [i, k] = [boundingRects.length, wrangler.nCases];
     while (i--) {
-      // If the ith representation is clicked...
+      // If the ith graphical object is clicked...
       if (funs.pointInRect(clickPoint, boundingRects[i])) {
-        // ...add all case indices that correspond to it
-        // to the list of selected cases, starting from the end
-        let j = wrangler.n;
+        // ...append all corresponding case indices
+        // to the list of the selected cases, starting from end
+        let j = wrangler.nCases;
         while (j--) {
           if (wrangler.indices[j] === i) selectedCases[--k] = j;
         }
       }
     }
-
-    // Return only the selected indices
-    return selectedCases.slice(k, wrangler.n);
+    // Shorten the array if some objects were not selected
+    return selectedCases.slice(k, wrangler.nCases);
   };
 
   // Handle generic keypress actions

@@ -25,8 +25,6 @@ export class HistoPlot extends Plot {
       y: new scls.PlotScaleContinuous(true),
     };
 
-    this.yExpandDirection = -1;
-
     this.representations = {
       bars: new reps.Bars(this.wranglers.wrangler1, 1),
     };

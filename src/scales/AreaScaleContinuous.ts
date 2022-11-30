@@ -32,9 +32,8 @@ export class AreaScaleContinuous {
   };
 
   registerData = (data: number[]) => {
-    const sorted = data.sort((a, b) => a - b);
-    this.dataMin = this.zero ? 0 : sorted[0];
-    this.dataMax = sorted[sorted.length - 1];
+    this.dataMin = this.zero ? 0 : Math.min(...data);
+    this.dataMax = Math.max(...data);
     return this;
   };
 

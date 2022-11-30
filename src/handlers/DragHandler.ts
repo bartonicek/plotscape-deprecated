@@ -29,7 +29,7 @@ export class DragHandler extends Handler {
     this.dragging = true;
     this.start = [event.offsetX, event.offsetY];
     this.previous = [event.offsetX, event.offsetY];
-    this.publish("startDrag");
+    this.broadcast("startDrag");
   };
 
   whileDrag = (event: { offsetX: number; offsetY: number }) => {
@@ -39,7 +39,7 @@ export class DragHandler extends Handler {
       this.hasDragged = true;
       this.end = [event.offsetX, event.offsetY];
       const dist = (start[0] - end[0]) ** 2 + (start[1] - end[1]) ** 2;
-      if (dist > 50) this.publish("whileDrag");
+      if (dist > 50) this.broadcast("whileDrag");
     }
   };
 
@@ -49,6 +49,6 @@ export class DragHandler extends Handler {
     this.start = [null, null];
     this.previous = [null, null];
     this.end = [null, null];
-    this.publish("endDrag");
+    this.broadcast("endDrag");
   };
 }

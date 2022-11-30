@@ -30,10 +30,9 @@ export class MarkerHandler extends Handler {
   updateCurrent = (at: number[], membership: dtstr.ValidMemberships) => {
     if (membership < 128 && at.length) this.anyPersistent = true;
     this.updated = new Int32Array(new Set([...this.updated, ...at]));
-    console.log([...this.updated]);
     this.clearCurrent(true);
     this.current.update(at, membership);
-    this.publish("updateCurrent");
+    this.broadcast("updateCurrent");
   };
 
   mergeCurrent = (keepTransient = false) => {
@@ -44,7 +43,7 @@ export class MarkerHandler extends Handler {
   clearCurrent = (keepTransient = false) => {
     if (!keepTransient) this.past.discardTransient();
     this.current = new MembershipArray(this.past);
-    this.publish("clearAll");
+    this.broadcast("clearCurrent");
   };
 
   clearAll = () => {
@@ -52,6 +51,7 @@ export class MarkerHandler extends Handler {
     this.anyPersistent = false;
     this.current.clear();
     this.past.clear();
+    this.broadcast("clearAll");
   };
 }
 

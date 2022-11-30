@@ -1,16 +1,15 @@
 import * as dtstr from "../datastructures.js";
 import * as sprs from "../sparsearrays.js";
-import * as funs from "../functions.js";
 import { GraphicLayer } from "../plot/GraphicLayer.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 import { Representation } from "./Representation.js";
 
 export class Bars extends Representation implements dtstr.RepresentationType {
-  widthMultiplier: number;
+  widthXD: number;
 
   constructor(wrangler: Wrangler, widthMultiplier: number) {
     super(wrangler);
-    this.widthMultiplier = widthMultiplier;
+    this.widthXD = widthMultiplier;
     this.sizeX = widthMultiplier;
     this.sizeLim = { min: 0.01, max: 1 };
   }
@@ -23,12 +22,19 @@ export class Bars extends Representation implements dtstr.RepresentationType {
     if (!this.scales.x.continuous) {
       return this.scales.x.breakWidth * this.sizeX;
     }
-    const x = this.getMapping(1, "x").sort((a, b) => a - b);
-    return Math.floor(this.sizeX * (x[1] - x[0]));
+    const x = [...this.getMapping(1, "x")].sort((a, b) => a - b);
+    return Math.max(
+      Math.floor(this.sizeX * (x[1] - x[0])),
+      Math.floor(this.sizeX * (x[x.length - 1] - x[x.length - 2]))
+    );
+  }
+
+  get drawHighlight() {
+    return this.drawHighlightStack;
   }
 
   defaultize = () => {
-    this.sizeX = this.widthMultiplier;
+    this.sizeX = this.widthXD;
     this.alphaX = 1;
   };
 
@@ -41,7 +47,7 @@ export class Bars extends Representation implements dtstr.RepresentationType {
     context.drawBarsV(x, y0, y, width, pars);
   };
 
-  drawHighlight = (context: GraphicLayer) => {
+  drawHighlightStack = (context: GraphicLayer) => {
     dtstr.highlightMembershipArray.forEach((e) => {
       const { y0D, widthD } = this;
       const [x, y] = this.getMappings(e, "x", "y");
@@ -52,6 +58,8 @@ export class Bars extends Representation implements dtstr.RepresentationType {
       context.drawBarsV(x, y0, y, width, pars);
     });
   };
+
+  drawHighlightSplit = (context: GraphicLayer) => {};
 
   get boundingRects() {
     const [x, y] = this.getMappings(1, "x", "y");

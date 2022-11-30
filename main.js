@@ -98,14 +98,78 @@ const layout = [
 ];
 
 const scene = new PLOTSCAPE.Scene(div1, data)
-  .addPlotWrapper("bar", new PLOTSCAPE.Mapping(["x", "cyl"]))
-  .addPlotWrapper("bubble", new PLOTSCAPE.Mapping(["x", "gear"], ["y", "am"]))
+  .addPlotWrapper("histo", new PLOTSCAPE.Mapping(["x", "disp"]))
+  .addPlotWrapper("square", new PLOTSCAPE.Mapping(["x", "gear"], ["y", "am"]))
   .addPlotWrapper("scatter", new PLOTSCAPE.Mapping(["x", "wt"], ["y", "mpg"]));
 
-console.log("aaa");
+// const xxx = scene.plots.scatter1.layers.base;
+// xxx.drawBarsV([100], [100], [200], [30]);
+// xxx.drawBarsH([100, 200], [100, 100], [200, 300], [30, 30]);
 
-const p1 = () => new Promise((resolve) => resolve([1, 2, 3]));
-const p2 = () => new Promise((resolve) => resolve([4, 5, 6]));
+// const p1 = () => new Promise((resolve) => resolve([1, 2, 3]));
+// const p2 = () => new Promise((resolve) => resolve([4, 5, 6]));
 
-const res = await Promise.all([p1(), p2()]);
-console.log(res.flat());
+// const res = await Promise.all([p1(), p2()]);
+// console.log(res.flat());
+
+// const pipeline = (...funs) =>
+//   funs.reduce(
+//     (res, fun) =>
+//       (...args) =>
+//         fun(res(...args))
+//   );
+
+// const add1 = (x) => x + 1;
+// const times2 = (x) => x * 2;
+
+// const pp = pipeline(add1, times2);
+
+// const arr1 = Array.from(Array(1e7), (e, i) => i);
+// let bb;
+
+// const t11 = performance.now();
+// let i = arr1.length;
+// while (i--) bb = arr1[i];
+// const t12 = performance.now();
+
+// const t21 = performance.now();
+// for (let i = arr1.length; i--; ) bb = arr1[i];
+// const t22 = performance.now();
+
+// const t31 = performance.now();
+// for (let i = 0; i < arr1.length; i++) bb = arr1[i];
+// const t32 = performance.now();
+
+// console.log(t12 - t11);
+// console.log(t22 - t21);
+// console.log(t32 - t31);
+
+class Pipeline {
+  constructor() {
+    this.funs = [];
+    this.args = [];
+  }
+
+  addFunction = (fun, args) => {
+    this.funs.unshift(fun);
+    this.args.unshift(args);
+  };
+
+  pushThrough = (x) => {
+    let [i, res] = [this.funs.length, x];
+    while (i--) res = this.funs[i](res, ...Object.values(this.args[i]));
+    return res;
+  };
+}
+
+const add = (x, b) => x.map((e) => e + b);
+const multiply = (x, m) => x.map((e) => e * m);
+const mean = (x) => x.reduce((a, b) => a + b) / x.length;
+
+const pipe = new Pipeline();
+pipe.addFunction(add, { number: 1 });
+pipe.addFunction(multiply, { multiple: 2 });
+pipe.addFunction(mean, {});
+
+console.log(pipe);
+console.log(pipe.pushThrough([1, 2, 3]));

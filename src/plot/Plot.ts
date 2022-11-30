@@ -7,8 +7,6 @@ import * as hndl from "../handlers/handlers.js";
 import { GraphicStack } from "./GraphicStack.js";
 import { Wrangler } from "../wrangler/Wrangler.js";
 
-const layers = ["layerBase", "layerUser", "layerHighlight", "layerOverlay"];
-
 export class Plot extends GraphicStack {
   id: string;
   scales: {
@@ -20,9 +18,6 @@ export class Plot extends GraphicStack {
       | scls.AreaScaleContinuous
       | scls.LengthScaleContinuous;
   };
-
-  xExpandDirection: number;
-  yExpandDirection: number;
 
   representations: { [key: string]: reps.Representation };
   auxiliaries: {
@@ -52,8 +47,6 @@ export class Plot extends GraphicStack {
     this.representations = {};
     this.wranglers = {};
     this.scales = { x: null, y: null };
-    this.xExpandDirection = 1;
-    this.yExpandDirection = 1;
     this.handlers = {
       marker: globals.marker,
       keypress: globals.keypress,
@@ -89,12 +82,12 @@ export class Plot extends GraphicStack {
   }
 
   resize = () => {
-    const { handlers, scales } = this;
+    const { layers, handlers, scales } = this;
     handlers.size.resize();
     const { bottom, left, top, right } = handlers.size.margins;
     scales.x.setPlotLimits(left, handlers.size.width - right);
     scales.y.setPlotLimits(handlers.size.height - bottom, top);
-    layers.forEach((e) => this[e].resize());
+    Object.values(layers).forEach((layer) => layer.resize(handlers.size));
   };
 
   activate = () => {
@@ -103,17 +96,17 @@ export class Plot extends GraphicStack {
   };
 
   getUnique = (mapping: string) => {
-    const arr = Object.keys(this.wranglers).map((name) =>
-      this.wranglers[name][mapping]?.extract(1)
+    const arr = Object.values(this.wranglers).map((wrangler) =>
+      wrangler[mapping]?.extract(1)
     );
     return Array.from(new Set(arr.flat()));
   };
 
   inSelection = (selPoints: dtstr.Rect2Points): number[] => {
-    const repNames = Object.keys(this.representations);
-    let [i, allCases] = [repNames.length, new Set<number>()];
+    const reps = Object.values(this.representations);
+    let [i, allCases] = [reps.length, new Set<number>()];
     while (i--) {
-      const cases = this.representations[repNames[i]].inSelection(selPoints);
+      const cases = reps[i].inSelection(selPoints);
       let j = cases.length;
       while (j--) allCases.add(cases[j]);
     }
@@ -121,10 +114,10 @@ export class Plot extends GraphicStack {
   };
 
   inClickPosition = (clickPoint: [number, number]): number[] => {
-    const repNames = Object.keys(this.representations);
-    let [i, allCases] = [repNames.length, new Set<number>()];
+    const reps = Object.values(this.representations);
+    let [i, allCases] = [reps.length, new Set<number>()];
     while (i--) {
-      const cases = this.representations[repNames[i]].atClick(clickPoint);
+      const cases = reps[i].atClick(clickPoint);
       let j = cases.length;
       while (j--) allCases.add(cases[j]);
     }
@@ -132,6 +125,7 @@ export class Plot extends GraphicStack {
   };
 
   updateCurrent = () => this.drawHighlight();
+  clearCurrent = () => this.drawHighlight();
   clearAll = () => this.drawHighlight();
 
   startDrag = () => {
@@ -147,19 +141,17 @@ export class Plot extends GraphicStack {
     if (this.handlers.click.button === 2) {
       const { x, y } = this.scales;
       const { previous, end } = this.handlers.drag;
-      const { xExpandDirection, yExpandDirection } = this;
       const [xDiff, yDiff] = [
-        ((previous[0] - end[0]) / this.width) * xExpandDirection,
-        ((previous[1] - end[1]) / this.height) * yExpandDirection,
+        (previous[0] - end[0]) / this.width,
+        (previous[1] - end[1]) / this.height,
       ];
 
-      if (x.zero) x.expand(0, xDiff);
-      if (!x.zero) x.expand(-xDiff, xDiff);
-      if (y.zero) y.expand(0, yDiff);
-      if (!y.zero) y.expand(yDiff, -yDiff);
+      x.expandDataLimits(-xDiff, xDiff);
+      y.expandDataLimits(yDiff, -yDiff);
 
+      this.handlers.marker.clearCurrent();
+      this.auxiliaries.highlightrects.clear();
       this.drawRedraw();
-
       return;
     }
 
@@ -184,11 +176,27 @@ export class Plot extends GraphicStack {
 
   keyPressed = (key: string) => {
     if (this.active) {
-      Object.keys(this.representations).forEach((e) => {
-        this.representations[e].keyPressed(key);
+      if (key === "KeyZ") {
+        // const { x, y } = this.scales;
+        // const w = this.auxiliaries.highlightrects.last;
+        // const x0 = x.plotToPct(w[0][0]) as number;
+        // const y0 = y.plotToPct(w[0][1]) as number;
+        // const x1 = x.plotToPct(w[1][0]) as number;
+        // const y1 = y.plotToPct(w[1][1]) as number;
+        // x.setPctLimits(Math.min(x0, x1), Math.max(x0, x1));
+        // y.setPctLimits(Math.min(y0, y1), Math.max(y0, y1));
+        // this.handlers.marker.clearAll();
+        // this.auxiliaries.highlightrects.clear();
+      }
+
+      Object.values(this.representations).forEach((rep) => rep.keyPressed(key));
+      ["x", "y"].forEach((e: "x" | "y") => {
+        this.scales[e].keyPressed(key);
       });
       this.drawBase();
       this.drawHighlight();
+      this.drawUser();
+      this.drawOverlay();
     }
   };
 
@@ -212,10 +220,10 @@ export class Plot extends GraphicStack {
       this.drawUser();
     }
 
-    if (event.button === 2) return;
-
     state.deactivateAll();
     this.activate();
+
+    if (event.button === 2) return;
 
     marker.updateCurrent(
       this.inClickPosition(click.positionLast),
@@ -237,16 +245,14 @@ export class Plot extends GraphicStack {
     context: "base" | "highlight" | "user" | "overlay",
     ...args: any[]
   ) => {
-    const { representations, auxiliaries } = this;
-    const [what, where] = ["draw", "layer"].map(
-      (e) => e + funs.capitalize(context)
-    );
-    if (context !== "user") this[where].drawClear();
-    if (context === "base") this[where].drawBackground();
+    const { layers, representations, auxiliaries } = this;
+    const what = `draw${funs.capitalize(context)}`;
+    if (context !== "user") this.layers[context].drawClear();
+    if (context === "base") this.layers[context].drawBackground();
 
     const repsAndAuxs = { ...representations, ...auxiliaries };
-    Object.keys(repsAndAuxs).forEach((e) => {
-      repsAndAuxs[e]?.[what]?.(this[where], ...args);
+    Object.values(repsAndAuxs).forEach((repOrAux) => {
+      repOrAux[what]?.(this.layers[context], ...args);
     });
   };
 
@@ -278,16 +284,16 @@ export class Plot extends GraphicStack {
     this.handlers.drag.state = this.handlers.state;
     this.resize();
 
-    if (scales.x.continuous) scales.x.expand(scales.x.zero ? 0 : 0.1, 0.1);
-    if (scales.y.continuous) scales.y.expand(scales.y.zero ? 0 : 0.1, 0.1);
-
     Object.keys(scales).forEach((e) => {
       scales[e].registerData?.(this.getUnique(e));
+      if ((e === "x" || e === "y") && scales[e].continuous) {
+        scales[e].expandDataLimits(scales[e].zero ? 0 : 0.1, 0.1, true);
+      }
     });
 
     const repsAndAuxs = { ...representations, ...auxiliaries };
-    Object.keys(repsAndAuxs).forEach((e) =>
-      repsAndAuxs[e].registerScales?.(scales)
+    Object.values(repsAndAuxs).forEach((repOrAux) =>
+      repOrAux.registerScales?.(scales)
     );
 
     sceneDiv.addEventListener("dblclick", doubleClick);
@@ -297,6 +303,6 @@ export class Plot extends GraphicStack {
       event.preventDefault()
     );
 
-    Object.keys(handlers).forEach((e) => handlers[e].subscribe(this));
+    Object.values(handlers).forEach((handler) => handler.listen(this));
   };
 }

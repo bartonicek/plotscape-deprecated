@@ -18,6 +18,7 @@ export class KeypressHandler extends Handler {
       "ControlLeft",
       "ShiftLeft",
       "KeyR",
+      "KeyZ",
       "Digit1",
       "Digit2",
       "Digit3",
@@ -47,7 +48,7 @@ export class KeypressHandler extends Handler {
       event.preventDefault();
       this.lastPressed = event.code;
       this.currentlyPressed[this.validKeys.indexOf(event.code)] = true;
-      this.publish("keyPressed", event.code);
+      this.broadcast("keyPressed", event.code);
     }
   };
 
@@ -55,7 +56,7 @@ export class KeypressHandler extends Handler {
     this.pressing = false;
     if (this.validKeys.includes(event.code)) {
       this.currentlyPressed[this.validKeys.indexOf(event.code)] = false;
-      this.publish("keyReleased", event.code);
+      this.broadcast("keyReleased", event.code);
     }
   };
 

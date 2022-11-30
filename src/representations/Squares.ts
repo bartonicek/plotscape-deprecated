@@ -32,8 +32,8 @@ export class Squares
     const { sizeD: defaultSize, sizeX } = this;
 
     let i = x.length;
-    const y0 = new sprs.SparseUint16Array(x.length);
-    const y1 = new sprs.SparseUint16Array(x.length);
+    const y0 = new sprs.SparseFloat32Array(x.length);
+    const y1 = new sprs.SparseFloat32Array(x.length);
 
     while (i--) {
       // Scale size
@@ -53,8 +53,8 @@ export class Squares
       const { sizeD, sizeX } = this;
 
       let i = x.length;
-      const y0 = new sprs.SparseUint16Array(x.length);
-      const y1 = new sprs.SparseUint16Array(x.length);
+      const y0 = new sprs.SparseFloat32Array(x.length);
+      const y1 = new sprs.SparseFloat32Array(x.length);
 
       while (i--) {
         // Scale size and fillsize (height)

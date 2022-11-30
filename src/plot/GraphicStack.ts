@@ -6,15 +6,12 @@ export class GraphicStack {
   containerDiv: HTMLDivElement;
   globals: dtstr.Globals;
   dimensions: { height: number; width: number };
-
-  layerBase: GraphicLayer;
-  layerUser: GraphicLayer;
-  layerHighlight: GraphicLayer;
-  layerOverlay: GraphicLayer;
+  layers: { [key: string]: GraphicLayer };
 
   constructor(element: HTMLDivElement) {
     this.sceneDiv = element;
     this.containerDiv = document.createElement("div");
+    this.layers = {};
     this.initialize();
   }
 
@@ -27,20 +24,15 @@ export class GraphicStack {
   }
 
   initialize = () => {
-    const graphicLayers = [
-      "layerBase",
-      "layerUser",
-      "layerHighlight",
-      "layerOverlay",
-    ];
+    const graphicLayers = ["base", "user", "highlight", "overlay"];
 
     this.sceneDiv.appendChild(this.containerDiv);
     this.containerDiv.classList.add("plotscape-container");
 
     graphicLayers.forEach((e) => {
-      this[e] = new GraphicLayer(this.containerDiv);
-      this.containerDiv.appendChild(this[e].canvas);
+      this.layers[e] = new GraphicLayer(this.containerDiv);
+      this.containerDiv.appendChild(this.layers[e].canvas);
     });
-    this.layerBase.drawBackground();
+    this.layers.base.drawBackground();
   };
 }

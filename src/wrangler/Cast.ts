@@ -6,25 +6,26 @@ import { Wrangler } from "./Wrangler.js";
 
 export class Cast {
   data: dtstr.VectorGeneric;
-  _transformedData: dtstr.VectorGeneric;
-  processedData: sprs.SparseArray;
   marker: MarkerHandler;
 
-  indices: Uint32Array;
-  nObjects: number;
-  emptyObjects: Uint8Array;
-
   allUnique: boolean;
+  nCases: number;
+  nObjects: number;
+  indices: Uint32Array;
+
+  _transformedData: dtstr.VectorGeneric;
+  processedData: sprs.SparseArray;
+
   mapFun: (x: any[]) => any[];
   reduceFun: (x: any[]) => any | any[];
 
   constructor(wrangler: Wrangler, mapping: dtstr.ValidMappings) {
     this.data = wrangler.getVariable(mapping);
     this.marker = wrangler.marker;
-    this.indices = wrangler.indices;
     this.allUnique = wrangler.allUnique;
+    this.nCases = wrangler.nCases;
     this.nObjects = wrangler.nObjects;
-    this.emptyObjects = wrangler.emptyObjects;
+    this.indices = wrangler.indices;
 
     this.processedData = new sprs.SparseArray(this.nObjects);
 
@@ -40,45 +41,60 @@ export class Cast {
   }
 
   extract = (membership?: dtstr.ValidMemberships) => {
-    const { marker, indices, nObjects, reduceFun } = this;
-
-    this.processedData.fill(null);
+    const { marker, indices, nCases, nObjects, transformedData, reduceFun } =
+      this;
+    // Initialize all values as empty.
     this.processedData.empty.fill(1);
 
     let i = nObjects;
 
+    // If each object is a row of data, return the transformed data
+    // (possibly filtered by membership)
     if (this.allUnique) {
+      // Base membership, no filtering
       if (membership === 1) {
+        this.processedData = new sprs.SparseArray(transformedData);
         this.processedData.empty.fill(0);
-        while (i--) this.processedData[i] = this.transformedData[i];
         return this.processedData;
       }
+      // Filter by membership, using indices that were updated only
       while (i--) {
         const u = marker.updated[i];
         if (u === -1) break;
         if (marker.isOfMembership(u, membership)) {
-          this.processedData[u] = this.transformedData[u];
+          this.processedData[u] = transformedData[u];
           this.processedData.empty[u] = 0;
         }
       }
       return this.processedData;
     }
 
-    let [j, subArrs] = [indices.length, Array.from(Array(nObjects), (e) => [])];
-    while (j--) {
-      const u = membership === 1 ? j : marker.updated[j];
-      if (u === -1) break;
-      if (membership === 1 || marker.isOfMembership(u, membership)) {
-        subArrs[this.indices[u]].push(this.transformedData[u]);
+    // If each object is a function of multiple rows of the data,
+    // split the data into sub-arrays, one for each object
+    let [j, subArrs] = [nCases, Array.from(Array(nObjects), (e) => [])];
+    // Base membership, no filtering
+    if (membership === 1) {
+      while (j--) subArrs[indices[j]].push(transformedData[j]);
+    } else {
+      // Filter by membership, use indices that were updated only
+      while (j--) {
+        const u = marker.updated[j];
+        if (marker.isOfMembership(u, membership)) {
+          subArrs[indices[u]].push(transformedData[u]);
+        }
       }
     }
 
+    // Take the sub-arrays and apply the reducing function to each
+    // (if the sub-array is empty, ingore it & leave the
+    // processed data value marked as empty)
     while (i--) {
       if (subArrs[i].length) {
         this.processedData[i] = reduceFun(subArrs[i]);
         this.processedData.empty[i] = 0;
       }
     }
+
     return this.processedData;
   };
 

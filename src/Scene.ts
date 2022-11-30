@@ -43,7 +43,7 @@ export class Scene {
     this.sceneDiv.style.border = `#000000`;
 
     this.globals.state.keypressHandler = this.globals.keypress;
-    this.globals.keypress.subscribe(this.globals.state);
+    this.globals.keypress.listen(this.globals.state);
 
     // Inject css
     const head = document.head;

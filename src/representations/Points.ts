@@ -21,7 +21,7 @@ export class Points extends Representation implements dtstr.RepresentationType {
       return Math.min(x.breakWidth, y.breakWidth) / Math.sqrt(Math.PI);
     }
     const l = Math.min(Math.abs(x.plotRange), Math.abs(y.plotRange));
-    const c = 10 * Math.log(this.wrangler.n);
+    const c = 10 * Math.log(this.wrangler.nCases);
     return l / c;
   }
 

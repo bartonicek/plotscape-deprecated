@@ -1,5 +1,32 @@
 import * as dtstr from "./datastructures.js";
 
+/**
+ * Inject arguments into a function
+ * @param fun: A function with a required argument `x` and a list of optional arguments
+ * @param args A list of optional arguments
+ * @returns A function with `x` as an argument, with the optional arguments applied impicitly
+ */
+const argify = (fun: (x: any, ...args: any[]) => any, ...args: any) => {
+  return (x: any) => fun(x, ...args);
+};
+
+/**
+ * Composes multiple functions into a pipeline
+ * @param funs One or more functions with or without arguments (optional arguments need to be put in partial functions/curried)
+ * @returns A composed function
+ */
+const pipeline = (...funs: Function[]) =>
+  funs.reduce(
+    (res, fun) =>
+      (...args: any[]) =>
+        fun(res(...args))
+  );
+
+/**
+ * Sorts increasing if numeric otherwise generic array sort
+ * @param arr An array
+ * @returns A sorted version of `x`
+ */
 const sort = (arr: any[]) => {
   if (typeof arr[0] === "number") return arr.sort((a, b) => a - b);
   return arr.sort();
@@ -109,7 +136,7 @@ const bin = (x: number[], n = 5) => {
  */
 const quantile = (x: number[], q: number | number[]) => {
   if (!x.length) return null;
-  const sorted = x.sort((a, b) => a - b);
+  const sorted = [...x].sort((a, b) => a - b);
 
   // For a single quantile
   if (typeof q === "number") {
@@ -360,6 +387,7 @@ const timeExecution = (fun: Function) => {
 };
 
 export {
+  pipeline,
   sort,
   deeplyClone,
   stringify,

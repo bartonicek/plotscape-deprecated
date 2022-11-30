@@ -17,17 +17,17 @@ export class Handler {
     });
   };
 
-  subscribe = (sub: Object) => {
+  listen = (listener: Object) => {
     const ownProperties = Object.keys(this);
-    Object.keys(sub).forEach((e) => {
-      if (typeof sub[e] === "function" && ownProperties.includes(e)) {
+    Object.keys(listener).forEach((e) => {
+      if (typeof listener[e] === "function" && ownProperties.includes(e)) {
         if (!this.callbacks.has(e)) this.callbacks.set(e, []);
-        this.callbacks.set(e, [...this.callbacks.get(e), sub[e]]);
+        this.callbacks.set(e, [...this.callbacks.get(e), listener[e]]);
       }
     });
   };
 
-  publish = (name: string, ...args: any[]) => {
+  broadcast = (name: string, ...args: any[]) => {
     this.callbacks.get(name)?.forEach((e) => e(...args));
   };
 }

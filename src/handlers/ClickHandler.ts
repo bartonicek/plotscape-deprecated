@@ -25,13 +25,13 @@ export class ClickHandler extends Handler {
     this.button = event.button;
     this.positionCurrent = [event.offsetX, event.offsetY];
     this.positionLast = [event.offsetX, event.offsetY];
-    this.publish("mouseDown");
+    this.broadcast("mouseDown");
   };
 
   mouseUp = (event: { offsetX: number; offsetY: number }) => {
     this.holding = false;
     this.button = -1;
     this.positionCurrent = [null, null];
-    this.publish("mouseUp");
+    this.broadcast("mouseUp");
   };
 }

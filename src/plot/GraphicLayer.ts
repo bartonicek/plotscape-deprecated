@@ -4,12 +4,16 @@ import {
   globalParameters as gpars,
   SingleValuedRepPars,
 } from "../globalparameters.js";
+import { SizeHandler } from "../handlers/SizeHandler.js";
 
 export class GraphicLayer {
   containerDiv: HTMLDivElement;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   defaultPars: SingleValuedRepPars;
+  innerWidth: number;
+  innerHeight: number;
+  innerCoords: { x0: number; y0: number; x1: number; y1: number };
 
   constructor(containerDiv: HTMLDivElement) {
     this.containerDiv = containerDiv;
@@ -22,7 +26,6 @@ export class GraphicLayer {
       alpha: 1,
       radius: 1,
     };
-    this.resize();
   }
 
   get width() {
@@ -37,11 +40,14 @@ export class GraphicLayer {
     return 3;
   }
 
-  resize = () => {
-    this.canvas.style.width = `${this.width}px`;
-    this.canvas.style.height = `${this.height}px`;
-    this.canvas.width = Math.ceil(this.width * this.scaleFactor);
-    this.canvas.height = Math.ceil(this.height * this.scaleFactor);
+  resize = (sizeHandler: SizeHandler) => {
+    this.canvas.style.width = `${sizeHandler.width}px`;
+    this.canvas.style.height = `${sizeHandler.height}px`;
+    this.canvas.width = Math.ceil(sizeHandler.width * this.scaleFactor);
+    this.canvas.height = Math.ceil(sizeHandler.height * this.scaleFactor);
+    this.innerWidth = sizeHandler.innerWidth;
+    this.innerHeight = sizeHandler.innerHeight;
+    this.innerCoords = sizeHandler.innerCoords;
     this.context.scale(this.scaleFactor, this.scaleFactor);
   };
 
@@ -52,6 +58,13 @@ export class GraphicLayer {
       .toUpperCase();
     if (alpha16.length < 2) alpha16 = "0" + alpha16;
     return col + alpha16;
+  };
+
+  clipToInner = () => {
+    const { context, innerWidth, innerHeight, innerCoords } = this;
+    context.beginPath();
+    context.rect(innerCoords.x0, innerCoords.y1, innerWidth, innerHeight);
+    context.clip();
   };
 
   drawClear = () => {
@@ -71,9 +84,9 @@ export class GraphicLayer {
 
   drawBarsV = (
     x: sprs.SparseUint16Array,
-    y0: sprs.SparseUint16Array,
-    y1: sprs.SparseUint16Array,
-    width: sprs.SparseUint16Array,
+    y0: sprs.SparseUint16Array | sprs.SparseFloat32Array,
+    y1: sprs.SparseUint16Array | sprs.SparseFloat32Array,
+    width: sprs.SparseUint16Array | sprs.SparseFloat32Array,
     pars = this.defaultPars
   ) => {
     const { colour, strokeColour, strokeWidth, alpha } = pars;
@@ -84,12 +97,42 @@ export class GraphicLayer {
     context.strokeStyle = strokeColour;
     context.lineWidth = strokeWidth;
 
+    this.clipToInner();
+
     let i = x.length;
     while (i--) {
-      if (x.empty[i] || y0.empty[i] || y1.empty[i] || width.empty[i]) continue;
+      if (x.empty[i]) continue;
       if (colour) context.fillRect(x[i] - w[i] / 2, y1[i], w[i], y0[i] - y1[i]);
       if (strokeColour)
         context.strokeRect(x[i] - w[i] / 2, y1[i], w[i], y0[i] - y1[i]);
+    }
+
+    context.restore();
+  };
+
+  drawBarsH = (
+    y: sprs.SparseUint16Array,
+    x0: sprs.SparseUint16Array | sprs.SparseFloat32Array,
+    x1: sprs.SparseUint16Array | sprs.SparseFloat32Array,
+    width: sprs.SparseUint16Array | sprs.SparseFloat32Array,
+    pars = this.defaultPars
+  ) => {
+    const { colour, strokeColour, strokeWidth, alpha } = pars;
+    const [context, w] = [this.context, width];
+
+    context.save();
+    context.fillStyle = this.toAlpha(colour, alpha);
+    context.strokeStyle = strokeColour;
+    context.lineWidth = strokeWidth;
+
+    this.clipToInner();
+
+    let i = y.length;
+    while (i--) {
+      if (y.empty[i]) continue;
+      if (colour) context.fillRect(x0[i], y[i] - w[i] / 2, x1[i] - x0[i], w[i]);
+      if (strokeColour)
+        context.strokeRect(x0[i], y[i] - w[i] / 2, x1[i] - x0[i], w[i]);
     }
 
     context.restore();
@@ -108,6 +151,8 @@ export class GraphicLayer {
     context.fillStyle = this.toAlpha(colour, alpha);
     context.strokeStyle = strokeColour;
     context.lineWidth = strokeWidth;
+
+    this.clipToInner();
 
     let i = x.length;
     while (i--) {
@@ -135,6 +180,8 @@ export class GraphicLayer {
     context.fillStyle = this.toAlpha(colour, alpha);
     context.strokeStyle = strokeColour;
     context.lineWidth = strokeWidth;
+
+    this.clipToInner();
 
     let i = x.length;
     while (i--) {

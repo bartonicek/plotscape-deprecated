@@ -4,17 +4,17 @@ import { MarkerHandler } from "../handlers/MarkerHandler.js";
 import { Cast } from "./Cast.js";
 
 export class Wrangler {
-  n: number;
-  allUnique: boolean;
   data: dtstr.DataFrame;
   mapping: dtstr.Mapping;
   marker: MarkerHandler;
 
+  allUnique: boolean;
+  nCases: number;
+  nObjects: number;
+  indices: Uint32Array;
+
   by: Set<dtstr.ValidMappings>;
   what: Set<dtstr.ValidMappings>;
-  indices: Uint32Array;
-  nObjects: number;
-  emptyObjects: Uint8Array;
 
   mapFuns: Map<dtstr.ValidMappings | "by" | "what", Function>;
   reduceFuns: Map<dtstr.ValidMappings | "by" | "what", Function>;
@@ -24,7 +24,7 @@ export class Wrangler {
     mapping: dtstr.Mapping,
     marker: MarkerHandler
   ) {
-    this.n = data[Object.keys(data)[0]].length;
+    this.nCases = Object.values(data)[0].length;
     this.allUnique = false;
     this.data = data;
     this.mapping = mapping;
@@ -44,16 +44,13 @@ export class Wrangler {
     this.allUnique = true;
     this.indices = new Uint32Array(Array.from(Array(this.marker.n).keys()));
     this.nObjects = this.indices.length;
-    this.emptyObjects = new Uint8Array(this.nObjects);
 
-    mappings.forEach((mapping) => {
-      this[mapping] = new Cast(this, mapping);
-    });
+    mappings.forEach((mapping) => (this[mapping] = new Cast(this, mapping)));
     return this;
   };
 
   groupBy = (...mappings: dtstr.ValidMappings[]) => {
-    mappings.forEach((mapping, i) => this.by.add(mapping));
+    mappings.forEach((mapping) => this.by.add(mapping));
     return this;
   };
 
@@ -96,7 +93,6 @@ export class Wrangler {
 
     this.indices = new Uint32Array(indices);
     this.nObjects = nObjects;
-    this.emptyObjects = new Uint8Array(this.nObjects);
 
     [...what].forEach((e) => {
       this[e] = new Cast(this, e);
